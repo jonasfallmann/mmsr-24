@@ -5,11 +5,12 @@ import numpy as np
 
 # %%
 class Track:
-    def __init__(self, track_id, track_name, artist, album_name):
+    def __init__(self, track_id, track_name, artist, album_name, url):
         self.track_id = track_id
         self.track_name = track_name
         self.artist = artist
         self.album_name = album_name
+        self.url = url
       
 
     def __str__(self):
@@ -51,6 +52,17 @@ class BaselineIRSystem(IRSystem):
         remaining_tracks = [t for t in self.tracks if t.track_id != query.track_id]
         return np.random.choice(remaining_tracks, n, replace=False).tolist()
 
-
+def preprocess(basic_information: pd.DataFrame, youtube_urls: pd.DataFrame):
+    basic_with_links = pd.merge(basic_information, youtube_urls, how="left", on="id")
+    tracks = []
+    for index, row in basic_with_links.iterrows():
+        track = Track(
+            row['id'],
+            row['song'],
+            row['artist'],
+            row['album_name'],
+            row["url"])
+        tracks.append(track)
+    return tracks
 
 
