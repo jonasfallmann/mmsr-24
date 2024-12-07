@@ -1,18 +1,19 @@
 # %%
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 
 
 # %%
 class Track:
-    def __init__(self, track_id, track_name, artist, album_name, url):
+    def __init__(self, track_id, track_name, artist, album_name, url, tfidf_vector):
         self.track_id = track_id
         self.track_name = track_name
         self.artist = artist
         self.album_name = album_name
         self.url = url
+        self.tfidf_vector = tfidf_vector
       
-
     def __str__(self):
         return f'{self.track_id} - {self.track_name} - {self.artist} - {self.album_name}'
 
@@ -52,16 +53,21 @@ class BaselineIRSystem(IRSystem):
         remaining_tracks = [t for t in self.tracks if t.track_id != query.track_id]
         return np.random.choice(remaining_tracks, n, replace=False).tolist()
 
-def preprocess(basic_information: pd.DataFrame, youtube_urls: pd.DataFrame):
+def preprocess(basic_information: pd.DataFrame, youtube_urls: pd.DataFrame, tfidf_df: pd.DataFrame):
     basic_with_links = pd.merge(basic_information, youtube_urls, how="left", on="id")
     tracks = []
     for index, row in basic_with_links.iterrows():
+        track_id = row['id']
+        tfidf_vector = tfidf_df.loc[track_id].values if track_id in tfidf_df.index else None
+        
         track = Track(
-            row['id'],
+            track_id,
             row['song'],
             row['artist'],
             row['album_name'],
-            row["url"])
+            row["url"],
+            tfidf_vector
+        )
         tracks.append(track)
     return tracks
 
