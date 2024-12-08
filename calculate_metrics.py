@@ -2,47 +2,36 @@ import pandas as pd
 import numpy as np
 from baseline_script import BaselineIRSystem, preprocess
 
-class EvaluationMetric:
-    @staticmethod
-    def precision_at_k(recommended_tracks, relevant_tracks, k=10):
-        if not recommended_tracks:
-            return 0
-        recommended_set = set(recommended_tracks[:k])
-        relevant_set = set(relevant_tracks)
-        return len(recommended_set & relevant_set) / k
-
-    @staticmethod
-    def recall_at_k(recommended_tracks, relevant_tracks, k=10):
-        if not relevant_tracks:
-            return 0
-        recommended_set = set(recommended_tracks[:k])
-        relevant_set = set(relevant_tracks)
-        return len(recommended_set & relevant_set) / len(relevant_set)
-
-    @staticmethod
-    def ndcg_at_k(recommended_tracks, relevant_tracks, k=10):
-        def dcg(recommended, relevant, k):
-            return sum((1 / np.log2(idx + 2)) for idx, track in enumerate(recommended[:k]) if track in relevant)
-        
-        def idcg(relevant, k):
-            return sum((1 / np.log2(idx + 2)) for idx in range(min(k, len(relevant))))
-        
-        dcg_value = dcg(recommended_tracks, relevant_tracks, k)
-        idcg_value = idcg(relevant_tracks, k)
-        return dcg_value / idcg_value if idcg_value > 0 else 0
-
-    @staticmethod
-    def mrr(recommended_tracks, relevant_tracks):
-        for idx, track in enumerate(recommended_tracks):
-            if track in relevant_tracks:
-                return 1 / (idx + 1)
+def precision_at_k(recommended_tracks, relevant_tracks, k=10):
+    if not recommended_tracks:
         return 0
-    
-def load_genres(filepath):
-    genre_df = pd.read_csv(filepath, sep='\t')
-    genre_map = {row['id']: eval(row['genre']) for _, row in genre_df.iterrows()}
-    return genre_map
+    recommended_set = set(recommended_tracks[:k])
+    relevant_set = set(relevant_tracks)
+    return len(recommended_set & relevant_set) / k
 
+def recall_at_k(recommended_tracks, relevant_tracks, k=10):
+    if not relevant_tracks:
+        return 0
+    recommended_set = set(recommended_tracks[:k])
+    relevant_set = set(relevant_tracks)
+    return len(recommended_set & relevant_set) / len(relevant_set)
+
+def ndcg_at_k(recommended_tracks, relevant_tracks, k=10):
+    def dcg(recommended, relevant, k):
+        return sum((1 / np.log2(idx + 2)) for idx, track in enumerate(recommended[:k]) if track in relevant)
+        
+    def idcg(relevant, k):
+        return sum((1 / np.log2(idx + 2)) for idx in range(min(k, len(relevant))))
+        
+    dcg_value = dcg(recommended_tracks, relevant_tracks, k)
+    idcg_value = idcg(relevant_tracks, k)
+    return dcg_value / idcg_value if idcg_value > 0 else 0
+
+def calculate_mrr(recommended_tracks, relevant_tracks):
+    for idx, track in enumerate(recommended_tracks):
+        if track in relevant_tracks:
+            return 1 / (idx + 1)
+    return 0
 
 class EvaluationProtocol:
     def __init__(self, tracks):
@@ -64,10 +53,10 @@ class EvaluationProtocol:
             recommended_tracks = ir_system.query(query_track, n=k)
             recommended_ids = [track.track_id for track in recommended_tracks]
 
-            precision = EvaluationMetric.precision_at_k(recommended_ids, relevant_tracks, k)
-            recall = EvaluationMetric.recall_at_k(recommended_ids, relevant_tracks, k)
-            ndcg = EvaluationMetric.ndcg_at_k(recommended_ids, relevant_tracks, k)
-            mrr = EvaluationMetric.mrr(recommended_ids, relevant_tracks)
+            precision = precision_at_k(recommended_ids, relevant_tracks, k)
+            recall = recall_at_k(recommended_ids, relevant_tracks, k)
+            ndcg = ndcg_at_k(recommended_ids, relevant_tracks, k)
+            mrr = calculate_mrr(recommended_ids, relevant_tracks)
 
             precision_scores.append(precision)
             recall_scores.append(recall)
