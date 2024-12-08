@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 from baseline_script import BaselineIRSystem, preprocess
+from text_irsystem import TextIRSystem
+from tqdm import tqdm
 
 def precision_at_k(recommended_tracks, relevant_tracks, k=10):
     if not recommended_tracks:
@@ -43,7 +45,7 @@ class EvaluationProtocol:
         ndcg_scores = []
         mrr_scores = []
 
-        for query_track in self.tracks:
+        for query_track in tqdm(self.tracks, desc="Evaluating IR system"):
             relevant_tracks = [
                 track.track_id
                 for track in self.tracks
@@ -79,9 +81,18 @@ if __name__ == "__main__":
 
     tracks = preprocess(basic_info_df, youtube_urls_df, tfidf_df, genres_df)
     baseline_ir = BaselineIRSystem(tracks)
+    print("Baseline IR System")
+    text_ir = TextIRSystem(tracks)
+    print("Text IR System")
     evaluation_protocol = EvaluationProtocol(tracks)
-    
-    metrics = evaluation_protocol.evaluate(baseline_ir)
-    print("Evaluation metrics:")
-    for metric, score in metrics.items():
+
+    metrics_baseline = evaluation_protocol.evaluate(baseline_ir)
+    metrics_text = evaluation_protocol.evaluate(text_ir)
+
+    print("Baseline:")
+    for metric, score in metrics_baseline.items():
         print(f"{metric}: {score:.4f}")
+    print("\nText IR System:")
+    for metric, score in metrics_text.items():
+        print(f"{metric}: {score:.4f}")
+    
