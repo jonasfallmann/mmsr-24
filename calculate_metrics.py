@@ -1,33 +1,48 @@
 import pandas as pd
 import numpy as np
-from sklearn.metrics import ndcg_score
 from baseline_script import BaselineIRSystem, preprocess
 
 class EvaluationMetric:
     @staticmethod
     def precision_at_k(recommended_tracks, relevant_tracks, k=10):
+        if not recommended_tracks:
+            return 0
         recommended_set = set(recommended_tracks[:k])
         relevant_set = set(relevant_tracks)
         return len(recommended_set & relevant_set) / k
 
     @staticmethod
     def recall_at_k(recommended_tracks, relevant_tracks, k=10):
+        if not relevant_tracks:
+            return 0
         recommended_set = set(recommended_tracks[:k])
         relevant_set = set(relevant_tracks)
-        return len(recommended_set & relevant_set) / len(relevant_set) if len(relevant_set) > 0 else 0
+        return len(recommended_set & relevant_set) / len(relevant_set)
 
     @staticmethod
     def ndcg_at_k(recommended_tracks, relevant_tracks, k=10):
-        y_true = [1 if track in relevant_tracks else 0 for track in recommended_tracks]
-        y_score = sorted(y_true, reverse=True)
-        return ndcg_score([y_score], [y_true], k=k)
+        def dcg(recommended, relevant, k):
+            return sum((1 / np.log2(idx + 2)) for idx, track in enumerate(recommended[:k]) if track in relevant)
+        
+        def idcg(relevant, k):
+            return sum((1 / np.log2(idx + 2)) for idx in range(min(k, len(relevant))))
+        
+        dcg_value = dcg(recommended_tracks, relevant_tracks, k)
+        idcg_value = idcg(relevant_tracks, k)
+        return dcg_value / idcg_value if idcg_value > 0 else 0
 
     @staticmethod
     def mrr(recommended_tracks, relevant_tracks):
-        for i, track in enumerate(recommended_tracks):
+        for idx, track in enumerate(recommended_tracks):
             if track in relevant_tracks:
-                return 1 / (i + 1)
-        return 0.0
+                return 1 / (idx + 1)
+        return 0
+    
+def load_genres(filepath):
+    genre_df = pd.read_csv(filepath, sep='\t')
+    genre_map = {row['id']: eval(row['genre']) for _, row in genre_df.iterrows()}
+    return genre_map
+
 
 class EvaluationProtocol:
     def __init__(self, tracks):
@@ -38,32 +53,46 @@ class EvaluationProtocol:
         recall_scores = []
         ndcg_scores = []
         mrr_scores = []
+
         for query_track in self.tracks:
+            relevant_tracks = [
+                track.track_id
+                for track in self.tracks
+                if track.track_id != query_track.track_id and any(genre in track.genres for genre in query_track.genres)
+            ]
+            
             recommended_tracks = ir_system.query(query_track, n=k)
-            relevant_tracks = [track for track in self.tracks if track.track_id != query_track.track_id and track.album_name == query_track.album_name]
             recommended_ids = [track.track_id for track in recommended_tracks]
-            relevant_ids = [track.track_id for track in relevant_tracks]
-            precision_scores.append(EvaluationMetric.precision_at_k(recommended_ids, relevant_ids, k))
-            recall_scores.append(EvaluationMetric.recall_at_k(recommended_ids, relevant_ids, k))
-            ndcg_scores.append(EvaluationMetric.ndcg_at_k(recommended_ids, relevant_ids, k))
-            mrr_scores.append(EvaluationMetric.mrr(recommended_ids, relevant_ids))
-        return {
+
+            precision = EvaluationMetric.precision_at_k(recommended_ids, relevant_tracks, k)
+            recall = EvaluationMetric.recall_at_k(recommended_ids, relevant_tracks, k)
+            ndcg = EvaluationMetric.ndcg_at_k(recommended_ids, relevant_tracks, k)
+            mrr = EvaluationMetric.mrr(recommended_ids, relevant_tracks)
+
+            precision_scores.append(precision)
+            recall_scores.append(recall)
+            ndcg_scores.append(ndcg)
+            mrr_scores.append(mrr)
+
+        results = {
             "Precision@10": np.mean(precision_scores),
             "Recall@10": np.mean(recall_scores),
             "NDCG@10": np.mean(ndcg_scores),
             "MRR": np.mean(mrr_scores),
         }
+        return results
     
 if __name__ == "__main__":
     basic_info_df = pd.read_csv("dataset/id_information_mmsr.tsv", sep='\t')
     youtube_urls_df = pd.read_csv("dataset/id_url_mmsr.tsv", sep='\t')
     tfidf_df = pd.read_csv("dataset/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
+    genres_df = pd.read_csv("dataset/id_genres_mmsr.tsv", sep='\t', index_col=0)
 
-    tracks = preprocess(basic_info_df, youtube_urls_df, tfidf_df)
+    tracks = preprocess(basic_info_df, youtube_urls_df, tfidf_df, genres_df)
     baseline_ir = BaselineIRSystem(tracks)
     evaluation_protocol = EvaluationProtocol(tracks)
     
     metrics = evaluation_protocol.evaluate(baseline_ir)
-    print("Baseline IR system metrics:")
-    for metric, value in metrics.items():
-        print(f"{metric}: {value:.4f}")
+    print("Evaluation metrics:")
+    for metric, score in metrics.items():
+        print(f"{metric}: {score:.4f}")
