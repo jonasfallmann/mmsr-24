@@ -17,21 +17,20 @@ basic_info_df = pd.read_csv("dataset/id_information_mmsr.tsv", sep='\t')
 youtube_urls_df = pd.read_csv("dataset/id_url_mmsr.tsv", sep='\t')
 tfidf_df = pd.read_csv("dataset/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
 genres_df = pd.read_csv("dataset/id_genres_mmsr.tsv", sep='\t', index_col=0)
+tags_df = pd.read_csv("dataset/id_tags_dict.tsv", sep='\t')
 
 # Preprocess datasets to tracks objects
-tracks = preprocess(basic_info_df, youtube_urls_df, tfidf_df, genres_df)
+tracks = preprocess(basic_info_df, youtube_urls_df, tfidf_df, genres_df, tags_df)
 
 baseline_ir = BaselineIRSystem(tracks)
+text_ir = TextIRSystem(tracks)
 
 # Option in ui input
 input_options = []
 for track in tracks:
     input_options.append(track.track_name + " - " + track.artist)
 
-
-
-
-# Stream lit
+# web interface
 st.set_page_config(layout="wide")
 st.title("Retrieval system")
 
