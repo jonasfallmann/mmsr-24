@@ -1,41 +1,57 @@
 import pandas as pd
 import numpy as np
-from baseline_script import BaselineIRSystem, preprocess
+from baseline_script import BaselineIRSystem, EvaluationProtocol, EvaluationMetric, preprocess
 from text_irsystem import TextIRSystem
 from tqdm import tqdm
 
-def precision_at_k(recommended_tracks, relevant_tracks, k=10):
-    if not recommended_tracks:
-        return 0
-    recommended_set = set(recommended_tracks[:k])
-    relevant_set = set(relevant_tracks)
-    return len(recommended_set & relevant_set) / k
+class PrecisionAtK(EvaluationMetric):
+    def __init__(self, k=10):
+        self.k = k
 
-def recall_at_k(recommended_tracks, relevant_tracks, k=10):
-    if not relevant_tracks:
-        return 0
-    recommended_set = set(recommended_tracks[:k])
-    relevant_set = set(relevant_tracks)
-    return len(recommended_set & relevant_set) / len(relevant_set)
+    def evaluate(self, recommended_tracks, relevant_tracks):
+        if not recommended_tracks:
+            return 0
+        recommended_set = set(recommended_tracks[:self.k])
+        relevant_set = set(relevant_tracks)
+        return len(recommended_set & relevant_set) / self.k
 
-def ndcg_at_k(recommended_tracks, relevant_tracks, k=10):
-    def dcg(recommended, relevant, k):
-        return sum((1 / np.log2(idx + 2)) for idx, track in enumerate(recommended[:k]) if track in relevant)
+class RecallAtK(EvaluationMetric):
+    def __init__(self, k=10):
+        self.k = k
+
+    def evaluate(self, recommended_tracks, relevant_tracks):
+        if not relevant_tracks:
+            return 0
+        recommended_set = set(recommended_tracks[:self.k])
+        relevant_set = set(relevant_tracks)
+        return len(recommended_set & relevant_set) / len(relevant_set)
+
+class NDCGAtK(EvaluationMetric):
+    def __init__(self, k=10):
+        self.k = k
+
+    def evaluate(self, recommended_tracks, relevant_tracks):
+        def dcg(recommended, relevant, k):
+            return sum((1 / np.log2(idx + 2)) for idx, track in enumerate(recommended[:k]) if track in relevant)
         
-    def idcg(relevant, k):
-        return sum((1 / np.log2(idx + 2)) for idx in range(min(k, len(relevant))))
+        def idcg(relevant, k):
+            return sum((1 / np.log2(idx + 2)) for idx in range(min(k, len(relevant))))
         
-    dcg_value = dcg(recommended_tracks, relevant_tracks, k)
-    idcg_value = idcg(relevant_tracks, k)
-    return dcg_value / idcg_value if idcg_value > 0 else 0
+        dcg_value = dcg(recommended_tracks, relevant_tracks, self.k)
+        idcg_value = idcg(relevant_tracks, self.k)
+        return dcg_value / idcg_value if idcg_value > 0 else 0
 
-def calculate_mrr(recommended_tracks, relevant_tracks):
-    for idx, track in enumerate(recommended_tracks):
-        if track in relevant_tracks:
-            return 1 / (idx + 1)
-    return 0
+class MRR(EvaluationMetric):
+    def __init__(self):
+        pass
 
-class EvaluationProtocol:
+    def evaluate(self, recommended_tracks, relevant_tracks):
+        for idx, track in enumerate(recommended_tracks):
+            if track in relevant_tracks:
+                return 1 / (idx + 1)
+        return 0
+
+class MetricsProtocol(EvaluationProtocol):
     def __init__(self, tracks):
         self.tracks = tracks
 
@@ -46,19 +62,30 @@ class EvaluationProtocol:
         mrr_scores = []
 
         for query_track in tqdm(self.tracks, desc="Evaluating IR system"):
-            relevant_tracks = [
+            top_genres = [query_track.top_genres]
+            if isinstance(query_track.top_genres, list):
+                top_genres = query_track.top_genres
+            
+            relevant_ids = [
                 track.track_id
                 for track in self.tracks
-                if track.track_id != query_track.track_id and any(genre in track.genres for genre in query_track.genres)
+                if track.track_id != query_track.track_id and (
+                    any(top_genre in track.top_genres for top_genre in top_genres)
+                )
             ]
             
             recommended_tracks = ir_system.query(query_track, n=k)
             recommended_ids = [track.track_id for track in recommended_tracks]
 
-            precision = precision_at_k(recommended_ids, relevant_tracks, k)
-            recall = recall_at_k(recommended_ids, relevant_tracks, k)
-            ndcg = ndcg_at_k(recommended_ids, relevant_tracks, k)
-            mrr = calculate_mrr(recommended_ids, relevant_tracks)
+            precision_metric = PrecisionAtK(k)
+            recall_metric = RecallAtK(k)
+            ndcg_metric = NDCGAtK(k)
+            mrr_metric = MRR()
+
+            precision = precision_metric.evaluate(recommended_ids, relevant_ids)
+            recall = recall_metric.evaluate(recommended_ids, relevant_ids)
+            ndcg = ndcg_metric.evaluate(recommended_ids, relevant_ids)
+            mrr = mrr_metric.evaluate(recommended_ids, relevant_ids)
 
             precision_scores.append(precision)
             recall_scores.append(recall)
@@ -78,13 +105,14 @@ if __name__ == "__main__":
     youtube_urls_df = pd.read_csv("dataset/id_url_mmsr.tsv", sep='\t')
     tfidf_df = pd.read_csv("dataset/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
     genres_df = pd.read_csv("dataset/id_genres_mmsr.tsv", sep='\t', index_col=0)
+    tags_df = pd.read_csv("dataset/id_tags_dict.tsv", sep='\t')
 
-    tracks = preprocess(basic_info_df, youtube_urls_df, tfidf_df, genres_df)
+    tracks = preprocess(basic_info_df, youtube_urls_df, tfidf_df, genres_df, tags_df)
     baseline_ir = BaselineIRSystem(tracks)
     print("Baseline IR System")
     text_ir = TextIRSystem(tracks)
     print("Text IR System")
-    evaluation_protocol = EvaluationProtocol(tracks)
+    evaluation_protocol = MetricsProtocol(tracks)
 
     metrics_baseline = evaluation_protocol.evaluate(baseline_ir)
     metrics_text = evaluation_protocol.evaluate(text_ir)
@@ -95,4 +123,3 @@ if __name__ == "__main__":
     print("\nText IR System:")
     for metric, score in metrics_text.items():
         print(f"{metric}: {score:.4f}")
-    
