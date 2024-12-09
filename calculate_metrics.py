@@ -51,7 +51,7 @@ class MRR(EvaluationMetric):
                 return 1 / (idx + 1)
         return 0
 
-class MetricsProtocol(EvaluationProtocol):
+class MetricsEvaluation(EvaluationProtocol):
     def __init__(self, tracks):
         self.tracks = tracks
 
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     print("Baseline IR System")
     text_ir = TextIRSystem(tracks)
     print("Text IR System")
-    evaluation_protocol = MetricsProtocol(tracks)
+    evaluation_protocol = MetricsEvaluation(tracks)
 
     metrics_baseline = evaluation_protocol.evaluate(baseline_ir)
     metrics_text = evaluation_protocol.evaluate(text_ir)
