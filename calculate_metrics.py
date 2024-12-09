@@ -62,15 +62,11 @@ class MetricsProtocol(EvaluationProtocol):
         mrr_scores = []
 
         for query_track in tqdm(self.tracks, desc="Evaluating IR system"):
-            top_genres = [query_track.top_genres]
-            if isinstance(query_track.top_genres, list):
-                top_genres = query_track.top_genres
-            
             relevant_ids = [
                 track.track_id
                 for track in self.tracks
                 if track.track_id != query_track.track_id and (
-                    any(top_genre in track.top_genres for top_genre in top_genres)
+                    any(top_genre in track.top_genres for top_genre in query_track.top_genres)
                 )
             ]
             

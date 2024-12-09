@@ -64,7 +64,7 @@ def preprocess(basic_information: pd.DataFrame, youtube_urls: pd.DataFrame, tfid
         tags = literal_eval(tag_weight_dict)
         max_score = max(tags.values())
         top_genres = [tag for tag, score in tags.items() if score == max_score]
-        return top_genres if len(top_genres) > 1 else top_genres[0]
+        return top_genres
     
     tags_df['top_genre'] = tags_df['(tag, weight)'].apply(get_top_genres)
     tags_dict = tags_df[['id', 'top_genre']].set_index('id').to_dict()['top_genre']
