@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from ast import literal_eval
+from typing import Protocol
 
 
 # %%
@@ -30,7 +31,7 @@ class EvaluationMetric:
         pass
 
 # %%
-class EvaluationProtocol:
+class EvaluationProtocol(Protocol):
     def __init__(self):
         pass
 
