@@ -1,4 +1,5 @@
 from baseline_script import BaselineIRSystem, preprocess
+from text_irsystem import TextIRSystem
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -35,30 +36,57 @@ st.set_page_config(layout="wide")
 st.title("Retrieval system")
 
 option = st.selectbox(
-    "Select a song",
-    (input_options),
+    label = "Choose a song",
+    options = (input_options),
+    index = None,
+    placeholder = "Choose a query track",
 )
-# Get track id for input title and artist
-track_name, artist = re.split(r' - ', option, maxsplit=1)
-for track in tracks:
-    if track.track_name == track_name and track.artist == artist:
-        query_track = track
-        break
-recommended_tracks = baseline_ir.query(query_track)
+
+ir_system = st.radio(
+    "Select an IR system",
+    ["Baseline", "Text based"],
+    index=None,
+    horizontal=True,
+)
+st.write("You selected:", ir_system)
+
+if option is not None:
+    # Get track id for input title and artist
+    track_name, artist = re.split(r' - ', option, maxsplit=1)
+    for track in tracks:
+        if track.track_name == track_name and track.artist == artist:
+            query_track = track
+            break
+else:
+    query_track = None
+
+if ir_system == "Baseline" and query_track is not None:
+    recommended_tracks = baseline_ir.query(query_track)
+elif ir_system == "Text based" and query_track is not None:
+    recommended_tracks = text_ir.query(query_track)
+else:
+    recommended_tracks = None
+
+
 
 # Results section
-st.header("Top 10 most similar songs")
-mygrid = make_grid(11,5)
-mygrid[0][0].write("Id")
-mygrid[0][1].write("Title")
-mygrid[0][2].write("Artist")
-mygrid[0][3].write("Album")
-mygrid[0][4].write("Video")
-
-for i in range(len(recommended_tracks)):
-    mygrid[i+1][0].write(recommended_tracks[i].track_id)
-    mygrid[i+1][1].write(recommended_tracks[i].track_name)
-    mygrid[i+1][2].write(recommended_tracks[i].artist)
-    mygrid[i+1][3].write(recommended_tracks[i].album_name)
-    mygrid[i+1][4].video(recommended_tracks[i].url)
+if recommended_tracks is None:
+    st.write("No results to show yet. Please choose a track for the query and an IR system to receive results") 
+else: 
+    st.header("Top 10 most similar songs")
+    st.subheader("Your query choice is: " + option)
+    mygrid = make_grid(11,6)
+    mygrid[0][0].write("Id")
+    mygrid[0][1].write("Title")
+    mygrid[0][2].write("Artist")
+    mygrid[0][3].write("Album")
+    mygrid[0][4].write("Top genres")
+    mygrid[0][5].write("Video")
+    for i in range(len(recommended_tracks)):
+        mygrid[i+1][0].write(recommended_tracks[i].track_id)
+        mygrid[i+1][1].write(recommended_tracks[i].track_name)
+        mygrid[i+1][2].write(recommended_tracks[i].artist)
+        mygrid[i+1][3].write(recommended_tracks[i].album_name)
+        mygrid[i+1][4].write(", ".join(recommended_tracks[i].genres))
+        mygrid[i+1][5].video(recommended_tracks[i].url)
     
