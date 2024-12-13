@@ -61,13 +61,15 @@ def preprocess(basic_information: pd.DataFrame, youtube_urls: pd.DataFrame, tfid
     basic_with_links = pd.merge(basic_information, youtube_urls, how="left", on="id")
     tracks = []
 
-    def get_top_genres(tag_weight_dict):
+    def get_top_genres(tag_weight_dict, genre_tags):
         tags = literal_eval(tag_weight_dict)
-        max_score = max(tags.values())
-        top_genres = [tag for tag, score in tags.items() if score == max_score]
+        genre_tags = {k: tags[k] for k in genre_tags if k in tags}
+        max_score = max(genre_tags.values())
+        top_genres = [tag for tag, score in genre_tags.items() if score == max_score]
         return top_genres
-    
-    tags_df['top_genre'] = tags_df['(tag, weight)'].apply(get_top_genres)
+
+    genre_tags = set([genre for sublist in genres_df['genre'].apply(literal_eval) for genre in sublist])
+    tags_df['top_genre'] = tags_df['(tag, weight)'].apply(lambda x: get_top_genres(x, genre_tags))
     tags_dict = tags_df[['id', 'top_genre']].set_index('id').to_dict()['top_genre']
 
     for _, row in basic_with_links.iterrows():
