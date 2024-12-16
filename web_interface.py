@@ -87,6 +87,6 @@ else:
         mygrid[i+1][1].write(recommended_tracks[i].track_name)
         mygrid[i+1][2].write(recommended_tracks[i].artist)
         mygrid[i+1][3].write(recommended_tracks[i].album_name)
-        mygrid[i+1][4].write(", ".join(recommended_tracks[i].genres))
+        mygrid[i+1][4].write(", ".join(recommended_tracks[i].top_genres))
         mygrid[i+1][5].video(recommended_tracks[i].url)
     
