@@ -5,7 +5,7 @@ To set up the Conda environment using the `environment.yml` file, run the follow
 
 ```sh
 conda env create -f environment.yml
-conda activate mmsr24
+conda activate mmsr
 ```
 
 ## Running the web interface
