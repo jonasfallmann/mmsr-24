@@ -1,5 +1,8 @@
 from baseline_script import BaselineIRSystem, preprocess
 from text_irsystem import TextIRSystem
+from audio_irsystem import AudioIRSystem
+from visual_irsystem import VisualIRSystem
+from text_irsystem import TextIRSystem
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -13,18 +16,45 @@ def make_grid(cols,rows):
             grid[i] = st.columns(rows)
     return grid
 
-# Load datasets
+# Basic information
 basic_info_df = pd.read_csv("dataset/id_information_mmsr.tsv", sep='\t')
 youtube_urls_df = pd.read_csv("dataset/id_url_mmsr.tsv", sep='\t')
-tfidf_df = pd.read_csv("dataset/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
-genres_df = pd.read_csv("dataset/id_genres_mmsr.tsv", sep='\t', index_col=0)
+genres_df = pd.read_csv("dataset/id_genres_mmsr.tsv", sep='\t')
 tags_df = pd.read_csv("dataset/id_tags_dict.tsv", sep='\t')
 
+# Text features
+tfidf_df = pd.read_csv("dataset/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
+bert_df = pd.read_csv("dataset/id_lyrics_bert_mmsr.tsv", sep='\t', index_col=0)
+
+# Audio features
+spectral_df = pd.read_csv("dataset/id_blf_spectral_mmsr.tsv", sep='\t', index_col=0)
+musicnn_df = pd.read_csv("dataset/id_musicnn_mmsr.tsv", sep='\t', index_col=0)
+
+# Visual features
+resnet_df = pd.read_csv("dataset/id_resnet_mmsr.tsv", sep='\t', index_col=0)
+vgg19_df = pd.read_csv("dataset/id_vgg19_mmsr.tsv", sep='\t', index_col=0)
+
 # Preprocess datasets to tracks objects
-tracks = preprocess(basic_info_df, youtube_urls_df, tfidf_df, genres_df, tags_df)
+tracks = preprocess(
+    basic_info_df, 
+    youtube_urls_df,
+    tfidf_df,
+    genres_df,
+    tags_df,
+    bert_df,
+    spectral_df,
+    musicnn_df,
+    resnet_df,
+    vgg19_df
+)
 
 baseline_ir = BaselineIRSystem(tracks)
-text_ir = TextIRSystem(tracks)
+text_ir_tfidf = TextIRSystem(tracks, feature_type='tfidf')
+text_ir_bert = TextIRSystem(tracks, feature_type='bert')
+audio_ir_spectral = AudioIRSystem(tracks, feature_type='spectral')
+audio_ir_musicnn = AudioIRSystem(tracks, feature_type='musicnn')
+visual_ir_resnet = VisualIRSystem(tracks, feature_type='resnet')
+visual_ir_vgg = VisualIRSystem(tracks, feature_type='vgg19')
 
 # Option in ui input
 input_options = []
@@ -44,7 +74,7 @@ option = st.selectbox(
 
 ir_system = st.radio(
     "Select an IR system",
-    ["Baseline", "Text based"],
+    ["Baseline", "Text-TF-IDF", "Text-BERT", "Audio-Spectral", "Audio-MusicNN", "Visual-ResNet", "Visual-VGG19"],
     index=None,
     horizontal=True,
 )
@@ -60,13 +90,23 @@ if option is not None:
 else:
     query_track = None
 
-if ir_system == "Baseline" and query_track is not None:
-    recommended_tracks = baseline_ir.query(query_track)
-elif ir_system == "Text based" and query_track is not None:
-    recommended_tracks = text_ir.query(query_track)
+if query_track is not None and ir_system is not None:
+    if ir_system == "Baseline":
+        recommended_tracks = baseline_ir.query(query_track)
+    elif ir_system == "Text-TF-IDF":
+        recommended_tracks = text_ir_tfidf.query(query_track)
+    elif ir_system == "Text-BERT":
+        recommended_tracks = text_ir_bert.query(query_track)
+    elif ir_system == "Audio-Spectral":
+        recommended_tracks = audio_ir_spectral.query(query_track)
+    elif ir_system == "Audio-MusicNN":
+        recommended_tracks = audio_ir_musicnn.query(query_track)
+    elif ir_system == "Visual-ResNet":
+        recommended_tracks = visual_ir_resnet.query(query_track)
+    elif ir_system == "Visual-VGG19":
+        recommended_tracks = visual_ir_vgg.query(query_track)
 else:
     recommended_tracks = None
-
 
 
 # Results section
