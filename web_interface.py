@@ -3,6 +3,7 @@ from text_irsystem import TextIRSystem
 from audio_irsystem import AudioIRSystem
 from visual_irsystem import VisualIRSystem
 from text_irsystem import TextIRSystem
+from calculate_metrics import MetricsEvaluation
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -108,13 +109,21 @@ if query_track is not None and ir_system is not None:
 else:
     recommended_tracks = None
 
-
 # Results section
 if recommended_tracks is None:
     st.write("No results to show yet. Please choose a track for the query and an IR system to receive results") 
 else: 
-    st.header("Top 10 most similar songs")
     st.subheader("Your query choice is: " + option)
+    st.subheader("Evaluation metrics: ")
+    evaluation_protocol = MetricsEvaluation(tracks)
+    evaluation = evaluation_protocol.evaluate(text_ir_bert)
+    metrics_grid = make_grid(1, 4)
+    metrics_grid[0][0].write("Precision@10: {:.2f}".format(evaluation["Precision@10"]))
+    metrics_grid[0][1].write("Recall@10: {:.2f}".format(evaluation["Recall@10"]))
+    metrics_grid[0][2].write("NDCG@10: {:.2f}".format(evaluation["NDCG@10"]))
+    metrics_grid[0][3].write("MRR: {:.2f}".format(evaluation["MRR"]))
+
+    st.header("Top 10 most similar songs")
     mygrid = make_grid(11,6)
     mygrid[0][0].write("Id")
     mygrid[0][1].write("Title")
@@ -129,4 +138,3 @@ else:
         mygrid[i+1][3].write(recommended_tracks[i].album_name)
         mygrid[i+1][4].write(", ".join(recommended_tracks[i].top_genres))
         mygrid[i+1][5].video(recommended_tracks[i].url)
-    
