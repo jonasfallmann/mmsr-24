@@ -149,7 +149,6 @@ else:
 if recommended_tracks is None:
     st.write("No results to show yet. Please choose a track for the query and an IR system to receive results") 
 else: 
-    st.subheader("Your query choice is: " + option)
     # st.subheader("Evaluation metrics: ")
     # evaluation_protocol = MetricsEvaluation(tracks)
     # evaluation = evaluation_protocol.evaluate(text_ir_bert)
