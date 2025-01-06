@@ -1,6 +1,6 @@
 # MMSR24
 
-## Setting up the Conda Environment
+## Setting up the Conda environment
 To set up the Conda environment using the `environment.yml` file, run the following commands:
 
 ```sh
