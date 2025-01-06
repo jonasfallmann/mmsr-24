@@ -128,7 +128,6 @@ ir_system = st.radio(
     index=None,
     horizontal=True,
 )
-st.write("You selected:", ir_system)
 
 if option is not None:
     # Get track id for input title and artist
