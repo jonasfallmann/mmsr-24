@@ -10,6 +10,45 @@ import re
 import pickle
 import os
 
+# web interface
+st.set_page_config(layout="wide")
+st.title("Retrieval system")
+
+@st.cache_data
+def load_data():
+    basic_info_df = pd.read_csv("dataset/id_information_mmsr.tsv", sep='\t')
+    youtube_urls_df = pd.read_csv("dataset/id_url_mmsr.tsv", sep='\t')
+    genres_df = pd.read_csv("dataset/id_genres_mmsr.tsv", sep='\t')
+    tags_df = pd.read_csv("dataset/id_tags_dict.tsv", sep='\t')
+    tfidf_df = pd.read_csv("dataset/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
+    bert_df = pd.read_csv("dataset/id_lyrics_bert_mmsr.tsv", sep='\t', index_col=0)
+    spectral_df = pd.read_csv("dataset/id_blf_spectral_mmsr.tsv", sep='\t', index_col=0)
+    musicnn_df = pd.read_csv("dataset/id_musicnn_mmsr.tsv", sep='\t', index_col=0)
+    resnet_df = pd.read_csv("dataset/id_resnet_mmsr.tsv", sep='\t', index_col=0)
+    vgg19_df = pd.read_csv("dataset/id_vgg19_mmsr.tsv", sep='\t', index_col=0)
+    return basic_info_df, youtube_urls_df, genres_df, tags_df, tfidf_df, bert_df, spectral_df, musicnn_df, resnet_df, vgg19_df
+
+@st.cache_data
+def preprocess_tracks():
+    basic_info_df, youtube_urls_df, genres_df, tags_df, tfidf_df, bert_df, spectral_df, musicnn_df, resnet_df, vgg19_df = load_data()
+    return preprocess(
+        basic_info_df, 
+        youtube_urls_df,
+        tfidf_df,
+        genres_df,
+        tags_df,
+        bert_df,
+        spectral_df,
+        musicnn_df,
+        resnet_df,
+        vgg19_df
+    )
+
+@st.cache_data
+def load_precomputed_similarities():
+    with open("precomputed_similarities.pkl", "rb") as f:
+        return pickle.load(f)
+
 # Util for displaying results with youtube video
 def make_grid(cols,rows):
     grid = [0]*cols
@@ -18,37 +57,8 @@ def make_grid(cols,rows):
             grid[i] = st.columns(rows)
     return grid
 
-# Basic information
-basic_info_df = pd.read_csv("dataset/id_information_mmsr.tsv", sep='\t')
-youtube_urls_df = pd.read_csv("dataset/id_url_mmsr.tsv", sep='\t')
-genres_df = pd.read_csv("dataset/id_genres_mmsr.tsv", sep='\t')
-tags_df = pd.read_csv("dataset/id_tags_dict.tsv", sep='\t')
-
-# Text features
-tfidf_df = pd.read_csv("dataset/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
-bert_df = pd.read_csv("dataset/id_lyrics_bert_mmsr.tsv", sep='\t', index_col=0)
-
-# Audio features
-spectral_df = pd.read_csv("dataset/id_blf_spectral_mmsr.tsv", sep='\t', index_col=0)
-musicnn_df = pd.read_csv("dataset/id_musicnn_mmsr.tsv", sep='\t', index_col=0)
-
-# Visual features
-resnet_df = pd.read_csv("dataset/id_resnet_mmsr.tsv", sep='\t', index_col=0)
-vgg19_df = pd.read_csv("dataset/id_vgg19_mmsr.tsv", sep='\t', index_col=0)
-
-# Preprocess datasets to tracks objects
-tracks = preprocess(
-    basic_info_df, 
-    youtube_urls_df,
-    tfidf_df,
-    genres_df,
-    tags_df,
-    bert_df,
-    spectral_df,
-    musicnn_df,
-    resnet_df,
-    vgg19_df
-)
+# Load and preprocess data
+tracks = preprocess_tracks()
 
 baseline_ir = BaselineIRSystem(tracks)
 text_ir_tfidf = TextIRSystem(tracks, feature_type='tfidf')
@@ -83,18 +93,12 @@ if not os.path.exists("precomputed_similarities.pkl"):
     precompute_similarities(ir_systems, tracks)
 
 # Load precomputed similarities
-with open("precomputed_similarities.pkl", "rb") as f:
-    print("loading similarities")
-    precomputed_similarities = pickle.load(f)
+precomputed_similarities = load_precomputed_similarities()
 
 # Option in ui input
 input_options = []
 for track in tracks:
     input_options.append(track.track_name + " - " + track.artist)
-
-# web interface
-st.set_page_config(layout="wide")
-st.title("Retrieval system")
 
 option = st.selectbox(
     label = "Choose a song",
