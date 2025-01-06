@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 from baseline_script import BaselineIRSystem, EvaluationProtocol, EvaluationMetric, preprocess
 from text_irsystem import TextIRSystem
+from audio_irsystem import AudioIRSystem
+from visual_irsystem import VisualIRSystem
 from tqdm import tqdm
 
 class PrecisionAtK(EvaluationMetric):
@@ -97,25 +99,79 @@ class MetricsEvaluation(EvaluationProtocol):
         return results
     
 if __name__ == "__main__":
+    # Load all necessary data
+    print("Loading datasets...")
+    
+    # Basic information
     basic_info_df = pd.read_csv("dataset/id_information_mmsr.tsv", sep='\t')
     youtube_urls_df = pd.read_csv("dataset/id_url_mmsr.tsv", sep='\t')
-    tfidf_df = pd.read_csv("dataset/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
-    genres_df = pd.read_csv("dataset/id_genres_mmsr.tsv", sep='\t', index_col=0)
+    genres_df = pd.read_csv("dataset/id_genres_mmsr.tsv", sep='\t')
     tags_df = pd.read_csv("dataset/id_tags_dict.tsv", sep='\t')
+    
+    # Text features
+    tfidf_df = pd.read_csv("dataset/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
+    bert_df = pd.read_csv("dataset/id_lyrics_bert_mmsr.tsv", sep='\t', index_col=0)
+    
+    # Audio features
+    spectral_df = pd.read_csv("dataset/id_blf_spectral_mmsr.tsv", sep='\t', index_col=0)
+    musicnn_df = pd.read_csv("dataset/id_musicnn_mmsr.tsv", sep='\t', index_col=0)
+    
+    # Visual features
+    resnet_df = pd.read_csv("dataset/id_resnet_mmsr.tsv", sep='\t', index_col=0)
+    vgg19_df = pd.read_csv("dataset/id_vgg19_mmsr.tsv", sep='\t', index_col=0)
 
-    tracks = preprocess(basic_info_df, youtube_urls_df, tfidf_df, genres_df, tags_df)
+    # Preprocess tracks
+    print("Preprocessing tracks...")
+    tracks = preprocess(
+        basic_info_df, 
+        youtube_urls_df,
+        tfidf_df,
+        genres_df,
+        tags_df,
+        bert_df,
+        spectral_df,
+        musicnn_df,
+        resnet_df,
+        vgg19_df
+    )
+
+    # Initialize all IR systems
+    print("\nInitializing IR systems...")
     baseline_ir = BaselineIRSystem(tracks)
-    print("Baseline IR System")
-    text_ir = TextIRSystem(tracks)
-    print("Text IR System")
+    text_ir_tfidf = TextIRSystem(tracks, feature_type='tfidf')
+    text_ir_bert = TextIRSystem(tracks, feature_type='bert')
+    audio_ir_spectral = AudioIRSystem(tracks, feature_type='spectral')
+    audio_ir_musicnn = AudioIRSystem(tracks, feature_type='musicnn')
+    visual_ir_resnet = VisualIRSystem(tracks, feature_type='resnet')
+    visual_ir_vgg = VisualIRSystem(tracks, feature_type='vgg19')
+
+    # Initialize evaluation protocol
     evaluation_protocol = MetricsEvaluation(tracks)
 
-    metrics_baseline = evaluation_protocol.evaluate(baseline_ir)
-    metrics_text = evaluation_protocol.evaluate(text_ir)
+    # Evaluate all systems
+    print("\nEvaluating systems...")
+    results = {
+        "Baseline": evaluation_protocol.evaluate(baseline_ir),
+        "Text-TF-IDF": evaluation_protocol.evaluate(text_ir_tfidf),
+        "Text-BERT": evaluation_protocol.evaluate(text_ir_bert),
+        "Audio-Spectral": evaluation_protocol.evaluate(audio_ir_spectral),
+        "Audio-MusicNN": evaluation_protocol.evaluate(audio_ir_musicnn),
+        "Visual-ResNet": evaluation_protocol.evaluate(visual_ir_resnet),
+        "Visual-VGG19": evaluation_protocol.evaluate(visual_ir_vgg)
+    }
 
-    print("Baseline:")
-    for metric, score in metrics_baseline.items():
-        print(f"{metric}: {score:.4f}")
-    print("\nText IR System:")
-    for metric, score in metrics_text.items():
-        print(f"{metric}: {score:.4f}")
+    # Print results
+    print("\nEvaluation Results:")
+    print("=" * 50)
+    for system_name, metrics in results.items():
+        print(f"\n{system_name}:")
+        print("-" * 30)
+        for metric, score in metrics.items():
+            print(f"{metric}: {score:.4f}")
+
+    print("\nBest Performing Systems:")
+    print("=" * 50)
+    metrics_list = ["Precision@10", "Recall@10", "NDCG@10", "MRR"]
+    for metric in metrics_list:
+        best_system = max(results.items(), key=lambda x: x[1][metric])
+        print(f"\nBest {metric}: {best_system[0]} ({best_system[1][metric]:.4f})")
