@@ -71,20 +71,28 @@ visual_ir_vgg = VisualIRSystem(tracks, feature_type='vgg19')
 # Precompute and store similarities
 def precompute_similarities(ir_systems, tracks):
     similarities = {}
-    progress_bar = st.progress(0)
+    total_systems = len(ir_systems)
+    overall_progress_bar = st.progress(0)
+    system_progress_bar = st.progress(0)
     status_text = st.text("Precomputing similarities, please wait...")
     total_tracks = len(tracks)
-    for ir_system_name, ir_system in ir_systems.items():
+    
+    for system_idx, (ir_system_name, ir_system) in enumerate(ir_systems.items()):
         status_text.text(f"Precomputing similarities for {ir_system_name}, please wait...")
         similarities[ir_system_name] = {}
         for idx, track in enumerate(tracks):
             recommended_tracks = ir_system.query(track)
             similarities[ir_system_name][track.track_id] = [rec.track_id for rec in recommended_tracks]
-            progress_bar.progress((idx + 1) / total_tracks)
+            system_progress_bar.progress((idx + 1) / total_tracks)
+        overall_progress_bar.progress((system_idx + 1) / total_systems)
+        system_progress_bar.empty()  # Reset system progress bar for next system
+    
     with open("precomputed_similarities.pkl", "wb") as f:
         pickle.dump(similarities, f)
-    progress_bar.empty()
+    
+    overall_progress_bar.empty()
     status_text.text("Precomputation complete.")
+    status_text.empty()  # Remove status_text after done
 
 ir_systems = {
     "Baseline": baseline_ir,
