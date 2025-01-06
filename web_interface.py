@@ -3,11 +3,12 @@ from text_irsystem import TextIRSystem
 from audio_irsystem import AudioIRSystem
 from visual_irsystem import VisualIRSystem
 from text_irsystem import TextIRSystem
-from calculate_metrics import MetricsEvaluation
 import streamlit as st
 import pandas as pd
 import numpy as np
 import re
+import pickle
+import os
 
 # Util for displaying results with youtube video
 def make_grid(cols,rows):
@@ -57,6 +58,35 @@ audio_ir_musicnn = AudioIRSystem(tracks, feature_type='musicnn')
 visual_ir_resnet = VisualIRSystem(tracks, feature_type='resnet')
 visual_ir_vgg = VisualIRSystem(tracks, feature_type='vgg19')
 
+# Precompute and store similarities
+def precompute_similarities(ir_systems, tracks):
+    similarities = {}
+    for ir_system_name, ir_system in ir_systems.items():
+        similarities[ir_system_name] = {}
+        for track in tracks:
+            recommended_tracks = ir_system.query(track)
+            similarities[ir_system_name][track.track_id] = [rec.track_id for rec in recommended_tracks]
+    with open("precomputed_similarities.pkl", "wb") as f:
+        pickle.dump(similarities, f)
+
+ir_systems = {
+    "Baseline": baseline_ir,
+    "Text-TF-IDF": text_ir_tfidf,
+    "Text-BERT": text_ir_bert,
+    "Audio-Spectral": audio_ir_spectral,
+    "Audio-MusicNN": audio_ir_musicnn,
+    "Visual-ResNet": visual_ir_resnet,
+    "Visual-VGG19": visual_ir_vgg
+}
+
+if not os.path.exists("precomputed_similarities.pkl"):
+    precompute_similarities(ir_systems, tracks)
+
+# Load precomputed similarities
+with open("precomputed_similarities.pkl", "rb") as f:
+    print("loading similarities")
+    precomputed_similarities = pickle.load(f)
+
 # Option in ui input
 input_options = []
 for track in tracks:
@@ -92,20 +122,8 @@ else:
     query_track = None
 
 if query_track is not None and ir_system is not None:
-    if ir_system == "Baseline":
-        recommended_tracks = baseline_ir.query(query_track)
-    elif ir_system == "Text-TF-IDF":
-        recommended_tracks = text_ir_tfidf.query(query_track)
-    elif ir_system == "Text-BERT":
-        recommended_tracks = text_ir_bert.query(query_track)
-    elif ir_system == "Audio-Spectral":
-        recommended_tracks = audio_ir_spectral.query(query_track)
-    elif ir_system == "Audio-MusicNN":
-        recommended_tracks = audio_ir_musicnn.query(query_track)
-    elif ir_system == "Visual-ResNet":
-        recommended_tracks = visual_ir_resnet.query(query_track)
-    elif ir_system == "Visual-VGG19":
-        recommended_tracks = visual_ir_vgg.query(query_track)
+    recommended_track_ids = precomputed_similarities[ir_system][query_track.track_id]
+    recommended_tracks = [track for track in tracks if track.track_id in recommended_track_ids]
 else:
     recommended_tracks = None
 
@@ -114,14 +132,14 @@ if recommended_tracks is None:
     st.write("No results to show yet. Please choose a track for the query and an IR system to receive results") 
 else: 
     st.subheader("Your query choice is: " + option)
-    st.subheader("Evaluation metrics: ")
-    evaluation_protocol = MetricsEvaluation(tracks)
-    evaluation = evaluation_protocol.evaluate(text_ir_bert)
-    metrics_grid = make_grid(1, 4)
-    metrics_grid[0][0].write("Precision@10: {:.2f}".format(evaluation["Precision@10"]))
-    metrics_grid[0][1].write("Recall@10: {:.2f}".format(evaluation["Recall@10"]))
-    metrics_grid[0][2].write("NDCG@10: {:.2f}".format(evaluation["NDCG@10"]))
-    metrics_grid[0][3].write("MRR: {:.2f}".format(evaluation["MRR"]))
+    # st.subheader("Evaluation metrics: ")
+    # evaluation_protocol = MetricsEvaluation(tracks)
+    # evaluation = evaluation_protocol.evaluate(text_ir_bert)
+    # metrics_grid = make_grid(1, 4)
+    # metrics_grid[0][0].write("Precision@10: {:.2f}".format(evaluation["Precision@10"]))
+    # metrics_grid[0][1].write("Recall@10: {:.2f}".format(evaluation["Recall@10"]))
+    # metrics_grid[0][2].write("NDCG@10: {:.2f}".format(evaluation["NDCG@10"]))
+    # metrics_grid[0][3].write("MRR: {:.2f}".format(evaluation["MRR"]))
 
     st.header("Top 10 most similar songs")
     mygrid = make_grid(11,6)
