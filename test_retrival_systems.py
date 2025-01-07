@@ -14,7 +14,9 @@ def test_retrieval_systems():
     youtube_urls_df = pd.read_csv("dataset/id_url_mmsr.tsv", sep='\t')
     genres_df = pd.read_csv("dataset/id_genres_mmsr.tsv", sep='\t')
     tags_df = pd.read_csv("dataset/id_tags_dict.tsv", sep='\t')
-    
+    spotify_df = pd.read_csv('dataset/id_metadata_mmsr.tsv', sep='\t')
+    lastfm_df = pd.read_csv('dataset/id_total_listens.tsv', sep='\t')
+
     # Text features
     tfidf_df = pd.read_csv("dataset/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
     bert_df = pd.read_csv("dataset/id_lyrics_bert_mmsr.tsv", sep='\t', index_col=0)
@@ -34,6 +36,8 @@ def test_retrieval_systems():
         tfidf_df,
         genres_df,
         tags_df,
+        spotify_df,
+        lastfm_df,
         bert_df,
         spectral_df,
         musicnn_df,

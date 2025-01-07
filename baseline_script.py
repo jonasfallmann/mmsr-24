@@ -7,6 +7,22 @@ from typing import Protocol
 from scipy.stats import rankdata
 
 
+class Tag:
+    """
+    Tag class representing a tag with associated weight.
+
+    Attributes:
+        tag: Tag name
+        weight: Tag weight
+    """
+
+    def __init__(self, tag, weight):
+        self.tag = tag
+        self.weight = weight
+
+    def __str__(self):
+        return f'{self.tag} ({self.weight})'
+
 # %%
 class Track:
     """
@@ -51,7 +67,8 @@ class Track:
         vgg19_vector=None,
         genres=None,
         top_genres=None,
-        popularity=None
+        popularity=None,
+        tags: list[Tag] | None = None
     ):
         # Basic information
         self.track_id = track_id
@@ -77,6 +94,8 @@ class Track:
         self.top_genres = top_genres
         
         self.popularity = popularity
+
+        self.tags = tags
       
     
     def __str__(self):
@@ -104,10 +123,14 @@ class EvaluationProtocol(Protocol):
 class IRSystem:
     def __init__(self, tracks):
         self.tracks = tracks
+        self.name = ""
 
     def query(self, query: Track, n=10):
         pass
 
+    def set_name(self, name):
+        self.name = name
+        return self
 
 # %%
 class BaselineIRSystem(IRSystem):
@@ -155,7 +178,7 @@ def preprocess(
     # Merge basic info with URLs
     basic_with_links = pd.merge(basic_information, youtube_urls, how="left", on="id")
     tracks = []
-    
+
     # Genre processing
     def get_top_genres(tag_weight_dict, genre_tags):
         tags = literal_eval(tag_weight_dict)
@@ -176,7 +199,7 @@ def preprocess(
     genre_tags = set([genre for sublist in genres_df['genre'].apply(literal_eval) for genre in sublist])
     tags_df['top_genre'] = tags_df['(tag, weight)'].apply(lambda x: get_top_genres(x, genre_tags))
     tags_dict = tags_df[['id', 'top_genre']].set_index('id').to_dict()['top_genre']
-    
+
     # Process each track
     for _, row in basic_with_links.iterrows():
         track_id = row['id']
@@ -194,8 +217,14 @@ def preprocess(
         vgg19_vector = vgg19_df.loc[track_id].values if vgg19_df is not None and track_id in vgg19_df.index else None
         
         # Genre and tag information
-        genres = eval(genres_df.loc[track_id].genre) if track_id in genres_df.index else []
+        genres = []
+        if track_id in genres_df["id"].tolist():
+            genres = genres_df.loc[genres_df["id"] == track_id, "genre"].values[0]
         top_genres = tags_dict.get(track_id, None)
+
+        tags = tags_df.loc[tags_df['id'] == track_id, '(tag, weight)'].values[0]
+        tags = literal_eval(tags) if tags else {}
+        tags = [Tag(tag, weight) for tag, weight in tags.items()]
         
         # Create track object
         track = Track(
@@ -213,6 +242,7 @@ def preprocess(
             genres=genres,
             top_genres=top_genres,
             popularity=row['combined_percentile_score'],
+            tags=tags
         )
         tracks.append(track)
     

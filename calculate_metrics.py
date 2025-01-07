@@ -1,10 +1,15 @@
+from concurrent.futures import ThreadPoolExecutor
+
 import pandas as pd
 import numpy as np
+
+import baseline_script
 from baseline_script import BaselineIRSystem, EvaluationProtocol, EvaluationMetric, preprocess
 from text_irsystem import TextIRSystem
 from audio_irsystem import AudioIRSystem
 from visual_irsystem import VisualIRSystem
 from tqdm import tqdm
+
 
 class PrecisionAtK(EvaluationMetric):
     def __init__(self, k=10):
@@ -17,6 +22,7 @@ class PrecisionAtK(EvaluationMetric):
         relevant_set = set(relevant_tracks)
         return len(recommended_set & relevant_set) / self.k
 
+
 class RecallAtK(EvaluationMetric):
     def __init__(self, k=10):
         self.k = k
@@ -27,6 +33,7 @@ class RecallAtK(EvaluationMetric):
         recommended_set = set(recommended_tracks[:self.k])
         relevant_set = set(relevant_tracks)
         return len(recommended_set & relevant_set) / len(relevant_set)
+
 
 class NDCGAtK(EvaluationMetric):
     def __init__(self, k=10):
@@ -43,6 +50,7 @@ class NDCGAtK(EvaluationMetric):
         idcg_value = idcg(relevant_tracks, self.k)
         return dcg_value / idcg_value if idcg_value > 0 else 0
 
+
 class MRR(EvaluationMetric):
     def __init__(self):
         pass
@@ -52,13 +60,35 @@ class MRR(EvaluationMetric):
             if track in relevant_tracks:
                 return 1 / (idx + 1)
         return 0
-    
+
+
 class Popularity(EvaluationMetric):
     def __init_(self):
         pass
-    def evaluate(self, recommended_tracks):
+
+    def evaluate(self, recommended_tracks, _):
         return sum([track.popularity for track in recommended_tracks])/len(recommended_tracks)
-        
+
+
+class DiversityAtK(EvaluationMetric):
+    def __init__(self, k=10, threshold = 50):
+        self.k = k
+        self.threshold = threshold
+
+    def evaluate(self, recommended_tracks: list[baseline_script.Track], _):
+        # considering all provided tags (excluding genre) per song, average number of unique tag occurences
+        # among retrieved documents
+        occurring_tags = []
+        for track in recommended_tracks[:self.k]:
+            # append tag names
+            if track.tags is None:
+                continue
+
+            # ignore tags that are a genre
+            occurring_tags.extend([tag.tag for tag in track.tags if tag.tag not in track.genres and tag.weight > self.threshold])
+        return len(set(occurring_tags)) / len(recommended_tracks)
+
+
 class MetricsEvaluation(EvaluationProtocol):
     def __init__(self, tracks):
         self.tracks = tracks
@@ -69,8 +99,13 @@ class MetricsEvaluation(EvaluationProtocol):
         ndcg_scores = []
         mrr_scores = []
         popularity_scores = []
+        diversity_scores = []
 
-        for query_track in tqdm(self.tracks, desc="Evaluating IR system"):
+        for index, query_track in enumerate(self.tracks):
+            # print progress every 10%
+            if index % (len(self.tracks) // 10) == 0:
+                print(f"[{ir_system.name}] Progress: {index/len(self.tracks)*100:.2f}%")
+
             relevant_ids = [
                 track.track_id
                 for track in self.tracks
@@ -87,25 +122,30 @@ class MetricsEvaluation(EvaluationProtocol):
             ndcg_metric = NDCGAtK(k)
             mrr_metric = MRR()
             popularity_metric = Popularity()
+            diversity_metric = DiversityAtK(k)
 
             precision = precision_metric.evaluate(recommended_ids, relevant_ids)
             recall = recall_metric.evaluate(recommended_ids, relevant_ids)
             ndcg = ndcg_metric.evaluate(recommended_ids, relevant_ids)
             mrr = mrr_metric.evaluate(recommended_ids, relevant_ids)
-            popularity = popularity_metric.evaluate(recommended_tracks)
+            popularity = popularity_metric.evaluate(recommended_tracks, relevant_ids)
+            diversity = diversity_metric.evaluate(recommended_tracks, relevant_ids)
 
             precision_scores.append(precision)
             recall_scores.append(recall)
             ndcg_scores.append(ndcg)
             mrr_scores.append(mrr)
             popularity_scores.append(popularity)
+            diversity_scores.append(diversity)
 
+        print(f"[{ir_system.name}] Progress: 100.00%")
         results = {
             "Precision@10": np.mean(precision_scores),
             "Recall@10": np.mean(recall_scores),
             "NDCG@10": np.mean(ndcg_scores),
             "MRR": np.mean(mrr_scores),
             "Popularity": np.mean(popularity_scores),
+            "Diversity": np.mean(diversity_scores)
         }
         return results
     
@@ -152,28 +192,34 @@ if __name__ == "__main__":
 
     # Initialize all IR systems
     print("\nInitializing IR systems...")
-    baseline_ir = BaselineIRSystem(tracks)
-    text_ir_tfidf = TextIRSystem(tracks, feature_type='tfidf')
-    text_ir_bert = TextIRSystem(tracks, feature_type='bert')
-    audio_ir_spectral = AudioIRSystem(tracks, feature_type='spectral')
-    audio_ir_musicnn = AudioIRSystem(tracks, feature_type='musicnn')
-    visual_ir_resnet = VisualIRSystem(tracks, feature_type='resnet')
-    visual_ir_vgg = VisualIRSystem(tracks, feature_type='vgg19')
+    baseline_ir = BaselineIRSystem(tracks).set_name("Baseline")
+    text_ir_tfidf = TextIRSystem(tracks, feature_type='tfidf').set_name("Text-TF-IDF")
+    text_ir_bert = TextIRSystem(tracks, feature_type='bert').set_name("Text-BERT")
+    audio_ir_spectral = AudioIRSystem(tracks, feature_type='spectral').set_name("Audio-Spectral")
+    audio_ir_musicnn = AudioIRSystem(tracks, feature_type='musicnn').set_name("Audio-MusicNN")
+    visual_ir_resnet = VisualIRSystem(tracks, feature_type='resnet').set_name("Visual-ResNet")
+    visual_ir_vgg = VisualIRSystem(tracks, feature_type='vgg19').set_name("Visual-VGG19")
 
     # Initialize evaluation protocol
     evaluation_protocol = MetricsEvaluation(tracks)
 
     # Evaluate all systems
     print("\nEvaluating systems...")
-    results = {
-        "Baseline": evaluation_protocol.evaluate(baseline_ir),
-        "Text-TF-IDF": evaluation_protocol.evaluate(text_ir_tfidf),
-        "Text-BERT": evaluation_protocol.evaluate(text_ir_bert),
-        "Audio-Spectral": evaluation_protocol.evaluate(audio_ir_spectral),
-        "Audio-MusicNN": evaluation_protocol.evaluate(audio_ir_musicnn),
-        "Visual-ResNet": evaluation_protocol.evaluate(visual_ir_resnet),
-        "Visual-VGG19": evaluation_protocol.evaluate(visual_ir_vgg)
-    }
+    results = {}
+    tasks = [
+        ("Baseline", baseline_ir),
+        ("Text-TF-IDF", text_ir_tfidf),
+        ("Text-BERT", text_ir_bert),
+        ("Audio-Spectral", audio_ir_spectral),
+        ("Audio-MusicNN", audio_ir_musicnn),
+        ("Visual-ResNet", visual_ir_resnet),
+        ("Visual-VGG19", visual_ir_vgg)
+    ]
+    with ThreadPoolExecutor() as executor:
+        futures = [executor.submit(evaluation_protocol.evaluate, ir_system) for _, ir_system in tasks]
+        for (system_name, _), future in zip(tasks, futures):
+            results[system_name] = future.result()
+
 
     # Print results
     print("\nEvaluation Results:")
