@@ -4,6 +4,7 @@ import numpy as np
 from tqdm import tqdm
 from ast import literal_eval
 from typing import Protocol
+from scipy.stats import rankdata
 
 
 # %%
@@ -49,7 +50,8 @@ class Track:
         resnet_vector=None,
         vgg19_vector=None,
         genres=None,
-        top_genres=None
+        top_genres=None,
+        popularity=None
     ):
         # Basic information
         self.track_id = track_id
@@ -73,6 +75,9 @@ class Track:
         # Metadata
         self.genres = genres if genres is not None else []
         self.top_genres = top_genres
+        
+        self.popularity = popularity
+      
     
     def __str__(self):
         """String representation of the track"""
@@ -114,12 +119,15 @@ class BaselineIRSystem(IRSystem):
         remaining_tracks = [t for t in self.tracks if t.track_id != query.track_id]
         return np.random.choice(remaining_tracks, n, replace=False).tolist()
 
+
 def preprocess(
     basic_information: pd.DataFrame, 
     youtube_urls: pd.DataFrame, 
     tfidf_df: pd.DataFrame, 
     genres_df: pd.DataFrame, 
     tags_df: pd.DataFrame,
+    spotify_df: pd.DataFrame,
+    lastfm_df: pd.DataFrame,
     bert_df: pd.DataFrame = None,
     spectral_df: pd.DataFrame = None,
     musicnn_df: pd.DataFrame = None,
@@ -156,6 +164,15 @@ def preprocess(
         top_genres = [tag for tag, score in genre_tags.items() if score == max_score]
         return top_genres
     
+    def get_popularity_score(spotify_df, lastfm_df):
+        df = pd.merge(spotify_df, lastfm_df, how="left", on="id")[["id", "popularity", "total_listens"]]
+        df['percentile_popularity'] = rankdata(df['popularity'], method='average') / len(df)
+        df['log_clicks'] = np.log1p(df['total_listens'])
+        df['percentile_clicks'] = rankdata(df['log_clicks'], method='average') / len(df)
+        df['combined_percentile_score'] = (df['percentile_popularity'] + df['percentile_clicks'])/2
+        return df[['id', 'combined_percentile_score']]
+    
+    basic_with_links = pd.merge(basic_with_links, get_popularity_score(spotify_df, lastfm_df), how="left", on="id")
     genre_tags = set([genre for sublist in genres_df['genre'].apply(literal_eval) for genre in sublist])
     tags_df['top_genre'] = tags_df['(tag, weight)'].apply(lambda x: get_top_genres(x, genre_tags))
     tags_dict = tags_df[['id', 'top_genre']].set_index('id').to_dict()['top_genre']
@@ -194,7 +211,8 @@ def preprocess(
             resnet_vector=resnet_vector,
             vgg19_vector=vgg19_vector,
             genres=genres,
-            top_genres=top_genres
+            top_genres=top_genres,
+            popularity=row['combined_percentile_score'],
         )
         tracks.append(track)
     

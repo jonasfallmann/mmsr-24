@@ -57,6 +57,17 @@ def make_grid(cols,rows):
             grid[i] = st.columns(rows)
     return grid
 
+# Load datasets
+basic_info_df = pd.read_csv("dataset/id_information_mmsr.tsv", sep='\t')
+youtube_urls_df = pd.read_csv("dataset/id_url_mmsr.tsv", sep='\t')
+tfidf_df = pd.read_csv("dataset/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
+genres_df = pd.read_csv("dataset/id_genres_mmsr.tsv", sep='\t', index_col=0)
+tags_df = pd.read_csv("dataset/id_tags_dict.tsv", sep='\t')
+spotify_df = pd.read_csv('dataset/id_metadata_mmsr.tsv', sep='\t')
+lastfm_df = pd.read_csv('dataset/id_total_listens.tsv', sep='\t')
+
+# Preprocess datasets to tracks objects
+tracks = preprocess(basic_info_df, youtube_urls_df, tfidf_df, genres_df, tags_df, spotify_df, lastfm_df)
 # Load and preprocess data
 tracks = preprocess_tracks()
 

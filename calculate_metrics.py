@@ -52,7 +52,13 @@ class MRR(EvaluationMetric):
             if track in relevant_tracks:
                 return 1 / (idx + 1)
         return 0
-
+    
+class Popularity(EvaluationMetric):
+    def __init_(self):
+        pass
+    def evaluate(self, recommended_tracks):
+        return sum([track.popularity for track in recommended_tracks])/len(recommended_tracks)
+        
 class MetricsEvaluation(EvaluationProtocol):
     def __init__(self, tracks):
         self.tracks = tracks
@@ -62,6 +68,7 @@ class MetricsEvaluation(EvaluationProtocol):
         recall_scores = []
         ndcg_scores = []
         mrr_scores = []
+        popularity_scores = []
 
         for query_track in tqdm(self.tracks, desc="Evaluating IR system"):
             relevant_ids = [
@@ -79,22 +86,26 @@ class MetricsEvaluation(EvaluationProtocol):
             recall_metric = RecallAtK(k)
             ndcg_metric = NDCGAtK(k)
             mrr_metric = MRR()
+            popularity_metric = Popularity()
 
             precision = precision_metric.evaluate(recommended_ids, relevant_ids)
             recall = recall_metric.evaluate(recommended_ids, relevant_ids)
             ndcg = ndcg_metric.evaluate(recommended_ids, relevant_ids)
             mrr = mrr_metric.evaluate(recommended_ids, relevant_ids)
+            popularity = popularity_metric.evaluate(recommended_tracks)
 
             precision_scores.append(precision)
             recall_scores.append(recall)
             ndcg_scores.append(ndcg)
             mrr_scores.append(mrr)
+            popularity_scores.append(popularity)
 
         results = {
             "Precision@10": np.mean(precision_scores),
             "Recall@10": np.mean(recall_scores),
             "NDCG@10": np.mean(ndcg_scores),
             "MRR": np.mean(mrr_scores),
+            "Popularity": np.mean(popularity_scores),
         }
         return results
     
@@ -107,6 +118,8 @@ if __name__ == "__main__":
     youtube_urls_df = pd.read_csv("dataset/id_url_mmsr.tsv", sep='\t')
     genres_df = pd.read_csv("dataset/id_genres_mmsr.tsv", sep='\t')
     tags_df = pd.read_csv("dataset/id_tags_dict.tsv", sep='\t')
+    spotify_df = pd.read_csv('dataset/id_metadata_mmsr.tsv', sep='\t')
+    lastfm_df = pd.read_csv('dataset/id_total_listens.tsv', sep='\t')
     
     # Text features
     tfidf_df = pd.read_csv("dataset/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
@@ -128,6 +141,8 @@ if __name__ == "__main__":
         tfidf_df,
         genres_df,
         tags_df,
+        spotify_df,
+        lastfm_df,
         bert_df,
         spectral_df,
         musicnn_df,
