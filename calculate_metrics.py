@@ -86,7 +86,8 @@ class DiversityAtK(EvaluationMetric):
 
             # ignore tags that are a genre
             occurring_tags.extend([tag.tag for tag in track.tags if tag.tag not in track.genres and tag.weight > self.threshold])
-        return len(set(occurring_tags)) / len(recommended_tracks)
+        tags_set = set(occurring_tags)
+        return len(tags_set) / self.k
 
 
 class MetricsEvaluation(EvaluationProtocol):
@@ -215,6 +216,13 @@ if __name__ == "__main__":
         ("Visual-ResNet", visual_ir_resnet),
         ("Visual-VGG19", visual_ir_vgg)
     ]
+
+# music cnn compared with different stages of diversification
+#     tasks = [("Audio-MusicNN", audio_ir_musicnn)]
+#     for diversification in [0.001, 0.025, 0.05, 0.1, 0.15, 0.2]:
+#         system = AudioIRSystem(tracks, feature_type='musicnn', diversification=diversification, n_diverse=5).set_name(f"Audio-MusicNN-{diversification}")
+#         tasks.append((f"Audio-MusicNN-{diversification}", system))
+
     with ThreadPoolExecutor() as executor:
         futures = [executor.submit(evaluation_protocol.evaluate, ir_system) for _, ir_system in tasks]
         for (system_name, _), future in zip(tasks, futures):

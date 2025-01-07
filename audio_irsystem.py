@@ -23,7 +23,7 @@ class AudioIRSystem(IRSystem):
         3. The magnitude is less important than the pattern it represents
     """
     
-    def __init__(self, tracks, feature_type='spectral'):
+    def __init__(self, tracks, feature_type='spectral', diversification = 0.0, n_diverse = 0):
         """
         Initialize Audio IR System with either Spectral or MusicNN features
         
@@ -46,6 +46,21 @@ class AudioIRSystem(IRSystem):
         self.tracks = valid_tracks
         self.embedding_matrix = np.vstack([getattr(track, vector_attr).reshape(1, -1) 
                                          for track in valid_tracks])
+        self.diversification = diversification
+
+        # get all top genres of all tracks
+        all_genres = set()
+        for track in valid_tracks:
+            all_genres.update(track.top_genres)
+
+        # calculate a vector for all genres by averaging the embeddings of all tracks with that genre
+        genre_vectors = {}
+        for genre in all_genres:
+            genre_tracks = [track for track in valid_tracks if genre in track.top_genres]
+            genre_vectors[genre] = np.mean([getattr(track, vector_attr) for track in genre_tracks], axis=0)
+
+        self.genre_vectors = genre_vectors
+        self.n_diverse = n_diverse
     
     def query(self, query: Track, n=10):
         """Find n most similar tracks based on chosen audio features"""
@@ -55,15 +70,72 @@ class AudioIRSystem(IRSystem):
         
         if query_vector is None:
             raise ValueError(f"Query track does not have {self.feature_type} vector")
-            
+
+        diversification_vectors = []
+        if self.diversification > 0:
+            # get the mean vector of the query vector genres
+            query_genres = query.top_genres
+            query_genre_vector = np.mean([self.genre_vectors[genre] for genre in query_genres], axis=0)
+
+            # get vector furthest away from the query genre vector using cosine similarity
+            # stack all genre vectors into a matrix
+            genre_vectors = np.vstack(list(self.genre_vectors.values()))
+            genre_distances = cosine_similarity(query_genre_vector.reshape(1, -1), genre_vectors)[0]
+
+            # get the top 5 genre vectors that are furthest away
+            furthest_genre_indices = np.argsort(genre_distances)[:5]
+            furthest_vectors = genre_vectors[furthest_genre_indices]
+            #furthest_genres = [list(self.genre_vectors.keys())[i] for i in furthest_genre_indices]
+
+            # calculate query vectors, each being pulled toward one of the furthest genre vectors
+            for vector in furthest_vectors:
+                diversification_vectors.append(query_vector + self.diversification * (vector - query_vector))
+
+
+        top_indices = self.get_top_indices(query, query_vector)[:n]
+
+        # if diversification is enabled, get top indices for diversification vectors and replace the last n_diverse tracks
+        # with the diversified tracks
+        if self.diversification > 0:
+            distribution = self.distribute_integer(self.n_diverse, len(diversification_vectors))
+            # drop last n_diverse tracks
+            overwrite_index = n - self.n_diverse
+            for idx, div_vector in enumerate(diversification_vectors):
+                div_top_indices = self.get_top_indices(query, div_vector)
+                dist = distribution[idx]
+                top_idx = 0
+                while dist > 0:
+                    if div_top_indices[top_idx] not in top_indices:
+                        top_indices[overwrite_index] = div_top_indices[top_idx]
+                        overwrite_index += 1
+                        dist -= 1
+                    top_idx += 1
+
+        return [self.tracks[idx] for idx in top_indices[:n]]
+
+    def get_top_indices(self, query, query_vector):
         query_vector = query_vector.reshape(1, -1)
         similarities = cosine_similarity(query_vector, self.embedding_matrix)[0]
-        
+
         # Handle case where query track is in the dataset
         query_idx = self.tracks.index(query) if query in self.tracks else -1
         top_indices = np.argsort(similarities)[::-1]
-        
+
         if query_idx != -1:
             top_indices = top_indices[top_indices != query_idx]
-        
-        return [self.tracks[idx] for idx in top_indices[:n]]
+        return top_indices
+
+    def distribute_integer(self, total, workers):
+        # Basic division
+        base_share = total // workers
+        # Remaining amount to distribute
+        remainder = total % workers
+
+        # Create the distribution list
+        distribution = [base_share] * workers
+
+        # Distribute the remainder among the first `remainder` workers
+        for i in range(remainder):
+            distribution[i] += 1
+
+        return distribution
