@@ -4,11 +4,12 @@ import numpy as np
 from tqdm import tqdm
 from ast import literal_eval
 from typing import Protocol
+from scipy.stats import rankdata
 
 
 # %%
 class Track:
-    def __init__(self, track_id, track_name, artist, album_name, url, tfidf_vector, genres, top_genres):
+    def __init__(self, track_id, track_name, artist, album_name, url, tfidf_vector, genres, top_genres, popularity):
         self.track_id = track_id
         self.track_name = track_name
         self.artist = artist
@@ -17,6 +18,7 @@ class Track:
         self.tfidf_vector = tfidf_vector
         self.genres = genres
         self.top_genres = top_genres
+        self.popularity = popularity
       
     def __str__(self):
         return f'{self.track_id} - {self.track_name} - {self.artist} - {self.album_name}'
@@ -57,7 +59,14 @@ class BaselineIRSystem(IRSystem):
         remaining_tracks = [t for t in self.tracks if t.track_id != query.track_id]
         return np.random.choice(remaining_tracks, n, replace=False).tolist()
 
-def preprocess(basic_information: pd.DataFrame, youtube_urls: pd.DataFrame, tfidf_df: pd.DataFrame, genres_df: pd.DataFrame, tags_df: pd.DataFrame):
+def preprocess(basic_information: pd.DataFrame,
+               youtube_urls: pd.DataFrame,
+               tfidf_df: pd.DataFrame,
+               genres_df: pd.DataFrame,
+               tags_df: pd.DataFrame,
+               spotify_df: pd.DataFrame,
+               lastfm_df: pd.DataFrame,
+               ):
     basic_with_links = pd.merge(basic_information, youtube_urls, how="left", on="id")
     tracks = []
 
@@ -67,7 +76,16 @@ def preprocess(basic_information: pd.DataFrame, youtube_urls: pd.DataFrame, tfid
         max_score = max(genre_tags.values())
         top_genres = [tag for tag, score in genre_tags.items() if score == max_score]
         return top_genres
-
+    
+    def get_popularity_score(spotify_df, lastfm_df):
+        df = pd.merge(spotify_df, lastfm_df, how="left", on="id")[["id", "popularity", "total_listens"]]
+        df['percentile_popularity'] = rankdata(df['popularity'], method='average') / len(df)
+        df['log_clicks'] = np.log1p(df['total_listens'])
+        df['percentile_clicks'] = rankdata(df['log_clicks'], method='average') / len(df)
+        df['combined_percentile_score'] = (df['percentile_popularity'] + df['percentile_clicks'])/2
+        return df[['id', 'combined_percentile_score']]
+    
+    basic_with_links = pd.merge(basic_with_links, get_popularity_score(spotify_df, lastfm_df), how="left", on="id")
     genre_tags = set([genre for sublist in genres_df['genre'].apply(literal_eval) for genre in sublist])
     tags_df['top_genre'] = tags_df['(tag, weight)'].apply(lambda x: get_top_genres(x, genre_tags))
     tags_dict = tags_df[['id', 'top_genre']].set_index('id').to_dict()['top_genre']
@@ -86,7 +104,8 @@ def preprocess(basic_information: pd.DataFrame, youtube_urls: pd.DataFrame, tfid
             row["url"],
             tfidf_vector,
             genres,
-            top_genres
+            top_genres,
+            row['combined_percentile_score'],
         )
         tracks.append(track)
     return tracks
