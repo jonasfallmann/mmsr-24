@@ -26,17 +26,21 @@ def load_data():
     musicnn_df = pd.read_csv("dataset/id_musicnn_mmsr.tsv", sep='\t', index_col=0)
     resnet_df = pd.read_csv("dataset/id_resnet_mmsr.tsv", sep='\t', index_col=0)
     vgg19_df = pd.read_csv("dataset/id_vgg19_mmsr.tsv", sep='\t', index_col=0)
-    return basic_info_df, youtube_urls_df, genres_df, tags_df, tfidf_df, bert_df, spectral_df, musicnn_df, resnet_df, vgg19_df
+    spotify_df = pd.read_csv('dataset/id_metadata_mmsr.tsv', sep='\t')
+    lastfm_df = pd.read_csv('dataset/id_total_listens.tsv', sep='\t')
+    return basic_info_df, youtube_urls_df, genres_df, tags_df, tfidf_df, bert_df, spectral_df, musicnn_df, resnet_df, vgg19_df, spotify_df, lastfm_df
 
 @st.cache_data
 def preprocess_tracks():
-    basic_info_df, youtube_urls_df, genres_df, tags_df, tfidf_df, bert_df, spectral_df, musicnn_df, resnet_df, vgg19_df = load_data()
+    basic_info_df, youtube_urls_df, genres_df, tags_df, tfidf_df, bert_df, spectral_df, musicnn_df, resnet_df, vgg19_df, spotify_df, lastfm_df = load_data()
     return preprocess(
         basic_info_df, 
         youtube_urls_df,
         tfidf_df,
         genres_df,
         tags_df,
+        spotify_df,
+        lastfm_df,
         bert_df,
         spectral_df,
         musicnn_df,
@@ -61,7 +65,7 @@ def make_grid(cols,rows):
 basic_info_df = pd.read_csv("dataset/id_information_mmsr.tsv", sep='\t')
 youtube_urls_df = pd.read_csv("dataset/id_url_mmsr.tsv", sep='\t')
 tfidf_df = pd.read_csv("dataset/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
-genres_df = pd.read_csv("dataset/id_genres_mmsr.tsv", sep='\t', index_col=0)
+genres_df = pd.read_csv("dataset/id_genres_mmsr.tsv", sep='\t')
 tags_df = pd.read_csv("dataset/id_tags_dict.tsv", sep='\t')
 spotify_df = pd.read_csv('dataset/id_metadata_mmsr.tsv', sep='\t')
 lastfm_df = pd.read_csv('dataset/id_total_listens.tsv', sep='\t')
