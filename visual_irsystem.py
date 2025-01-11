@@ -54,7 +54,7 @@ class VisualIRSystem(IRSystem):
         self.embedding_matrix = np.vstack([getattr(track, vector_attr).reshape(1, -1) 
                                          for track in valid_tracks])
     
-    def query(self, query: Track, n=10):
+    def query(self, query: Track, n=10, late_fusion=False):
         """Find n most similar tracks based on chosen visual features"""
         # Get the appropriate vector based on feature type
         vector_attr = 'resnet_vector' if self.feature_type == 'resnet' else 'vgg19_vector'
@@ -65,6 +65,8 @@ class VisualIRSystem(IRSystem):
             
         query_vector = query_vector.reshape(1, -1)
         similarities = cosine_similarity(query_vector, self.embedding_matrix)[0]
+        if late_fusion:
+            return similarities
         
         # Handle case where query track is in the dataset
         query_idx = self.tracks.index(query) if query in self.tracks else -1
