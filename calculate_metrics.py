@@ -5,6 +5,7 @@ import numpy as np
 
 import baseline_script
 from baseline_script import BaselineIRSystem, EvaluationProtocol, EvaluationMetric, preprocess
+from early_fusion_irsystem import EarlyFusionIrSystem, FeatureType, ReducerType
 from text_irsystem import TextIRSystem
 from audio_irsystem import AudioIRSystem
 from visual_irsystem import VisualIRSystem
@@ -201,6 +202,8 @@ if __name__ == "__main__":
     audio_ir_musicnn = AudioIRSystem(tracks, feature_type='musicnn').set_name("Audio-MusicNN")
     visual_ir_resnet = VisualIRSystem(tracks, feature_type='resnet').set_name("Visual-ResNet")
     visual_ir_vgg = VisualIRSystem(tracks, feature_type='vgg19').set_name("Visual-VGG19")
+    # set to 100 dims as this is way faster to compute with marginal loss in performance
+    early_fusion_irsystem = EarlyFusionIrSystem(tracks, FeatureType.BERT, FeatureType.MUSICNN, n_dims=100).set_name("Early Fusion BERT+MusicNN 100")
     late_fusion_ir = LateFusionIRSystem(tracks, [text_ir_bert, audio_ir_musicnn, visual_ir_resnet], [0.3 , 0.3, 0.4]).set_name('LateFusion-Bert-MusicNN-ResNet')
 
     # Initialize evaluation protocol
@@ -217,20 +220,14 @@ if __name__ == "__main__":
         ("Audio-MusicNN", audio_ir_musicnn),
         ("Visual-ResNet", visual_ir_resnet),
         ("Visual-VGG19", visual_ir_vgg),
+        ("Early Fusion BERT+MusicNN 100", early_fusion_irsystem)
         ("LateFusion-Bert-MusicNN-ResNet", late_fusion_ir)
-    ]
-
-# music cnn compared with different stages of diversification
-#     tasks = [("Audio-MusicNN", audio_ir_musicnn)]
-#     for diversification in [0.001, 0.025, 0.05, 0.1, 0.15, 0.2]:
-#         system = AudioIRSystem(tracks, feature_type='musicnn', diversification=diversification, n_diverse=5).set_name(f"Audio-MusicNN-{diversification}")
-#         tasks.append((f"Audio-MusicNN-{diversification}", system))
+     ]
 
     with ThreadPoolExecutor() as executor:
         futures = [executor.submit(evaluation_protocol.evaluate, ir_system) for _, ir_system in tasks]
         for (system_name, _), future in zip(tasks, futures):
             results[system_name] = future.result()
-
 
     # Print results
     print("\nEvaluation Results:")
@@ -247,3 +244,24 @@ if __name__ == "__main__":
     for metric in metrics_list:
         best_system = max(results.items(), key=lambda x: x[1][metric])
         print(f"\nBest {metric}: {best_system[0]} ({best_system[1][metric]:.4f})")
+
+
+def run_full_early_fusion_experiment(tasks):
+    # add all combinations of early fusion systems with full dimensions and 100 dimensions
+    for idx, feature1 in enumerate(FeatureType):
+        for jdx, feature2 in enumerate(FeatureType):
+            if idx >= jdx:
+                continue
+            early_fusion_irsystem = EarlyFusionIrSystem(tracks, feature1, feature2).set_name(
+                f"Early Fusion {feature1.value}+{feature2.value} Full Dimension")
+            early_fusion_irsystem_100 = EarlyFusionIrSystem(tracks, feature1, feature2, n_dims=100).set_name(
+                f"Early Fusion {feature1.value}+{feature2.value} 100 Dimensions")
+            tasks.append((early_fusion_irsystem.name, early_fusion_irsystem))
+            tasks.append((early_fusion_irsystem_100.name, early_fusion_irsystem_100))
+
+
+def run_diversification_experiment(tasks):
+    #music cnn compared with different stages of diversification
+    for diversification in [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.15, 0.2]:
+        system = AudioIRSystem(tracks, feature_type='musicnn', diversification=diversification, n_diverse=5).set_name(f"Audio-MusicNN-{diversification}")
+        tasks.append((f"Audio-MusicNN-{diversification}", system))

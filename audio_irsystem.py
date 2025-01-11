@@ -101,17 +101,19 @@ class AudioIRSystem(IRSystem):
         if self.diversification > 0:
             distribution = self.distribute_integer(self.n_diverse, len(diversification_vectors))
             # drop last n_diverse tracks
-            overwrite_index = n - self.n_diverse
+            replacement_indices = np.zeros(self.n_diverse, dtype=int)
+            overwrite_index = 0
             for idx, div_vector in enumerate(diversification_vectors):
                 div_top_indices = self.get_top_indices(query, div_vector)
                 dist = distribution[idx]
                 top_idx = 0
                 while dist > 0:
-                    if div_top_indices[top_idx] not in top_indices:
-                        top_indices[overwrite_index] = div_top_indices[top_idx]
+                    if div_top_indices[top_idx] not in top_indices and div_top_indices[top_idx] not in replacement_indices:
+                        replacement_indices[overwrite_index] = div_top_indices[top_idx]
                         overwrite_index += 1
                         dist -= 1
                     top_idx += 1
+            top_indices[-self.n_diverse:] = replacement_indices
 
         return [self.tracks[idx] for idx in top_indices[:n]]
 

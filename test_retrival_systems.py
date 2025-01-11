@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+
+from early_fusion_irsystem import FeatureType, EarlyFusionIrSystem
 from text_irsystem import TextIRSystem
 from audio_irsystem import AudioIRSystem
 from visual_irsystem import VisualIRSystem
@@ -58,6 +60,9 @@ def test_retrieval_systems():
     # Visual systems
     visual_ir_resnet = VisualIRSystem(tracks, feature_type='resnet')
     visual_ir_vgg = VisualIRSystem(tracks, feature_type='vgg19')
+
+    # early fusion system
+    early_fusion_ir = EarlyFusionIrSystem(tracks, featureSet1=FeatureType.TFIDF, featureSet2=FeatureType.VGG19, n_dims=100)
     
     # Test retrieval with a sample query
     print("\nTesting retrieval systems...")
@@ -100,6 +105,12 @@ def test_retrieval_systems():
     print("\n2. VGG19 Based Similar Tracks:")
     print("-" * 50)
     for track in visual_ir_vgg.query(query_track, n=n):
+        print(track)
+
+    # Test early fusion system
+    print("\nEarly Fusion Retrieval Results:")
+    print("-" * 50)
+    for track in early_fusion_ir.query(query_track, n=n):
         print(track)
 
 if __name__ == "__main__":
