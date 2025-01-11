@@ -4,6 +4,7 @@ from audio_irsystem import AudioIRSystem
 from visual_irsystem import VisualIRSystem
 from text_irsystem import TextIRSystem
 from late_fusion_irsystem import LateFusionIRSystem
+import calculate_metrics
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -148,12 +149,6 @@ option = st.selectbox(
 
 number_retrieved = st.slider("How many songs do you want to retrieve?", 1, 100, 10)
 
-ir_system = st.radio(
-    "Select an IR system",
-    ["Baseline", "Text-TF-IDF", "Text-BERT", "Audio-Spectral", "Audio-MusicNN", "Visual-ResNet", "Visual-VGG19", "LateFusion-Bert-MusicNN-ResNet"],
-    index=None,
-    horizontal=True,
-)
 
 if option is not None:
     # Get track id for input title and artist
@@ -164,6 +159,43 @@ if option is not None:
             break
 else:
     query_track = None
+
+
+precision = calculate_metrics.PrecisionAtK(k=100)
+recall = calculate_metrics.RecallAtK(k=100)
+ndcg = calculate_metrics.NDCGAtK(k=100)
+mrr = calculate_metrics.MRR()
+popularity = calculate_metrics.Popularity()
+diversity = calculate_metrics.DiversityAtK(k=100)
+systems = ["Baseline", "Text-TF-IDF", "Text-BERT", "Audio-Spectral", "Audio-MusicNN", "Visual-ResNet", "Visual-VGG19", "LateFusion-Bert-MusicNN-ResNet"]
+# Hier performance einfügen
+@st.cache_resource
+def get_metrics(_query_track, number_retrieved):
+    grid_metrics = make_grid(len(systems), 7)
+    for system in systems:
+        metrics_recommended_track_ids = precomputed_similarities[system][_query_track.track_id][:number_retrieved]
+        metrics_recommended_tracks = [track for track in tracks if track.track_id in metrics_recommended_track_ids]
+        metric_relevant_ids = [track.track_id for track in metrics_recommended_tracks if (any(top_genre in track.top_genres for top_genre in _query_track.top_genres))]
+        p = round(precision.evaluate(metrics_recommended_track_ids, metric_relevant_ids),4)
+        r = round(recall.evaluate(metrics_recommended_track_ids, metric_relevant_ids),4)
+        n = round(ndcg.evaluate(metrics_recommended_track_ids, metric_relevant_ids),4)
+        m = round(mrr.evaluate(metrics_recommended_track_ids, metric_relevant_ids),4)
+        pop = round(popularity.evaluate(metrics_recommended_tracks, metric_relevant_ids),4)
+        d = round(diversity.evaluate(metrics_recommended_tracks, metric_relevant_ids),4)
+        metrics = {"Precision":p, "Recall":r, "nDCG":n, "MRR":m, "Popularity":pop, "Diversity":d}
+        grid_metrics[systems.index(system)][0].write(system)
+        for m in range(len(metrics)):
+            grid_metrics[systems.index(system)][m+1].write(f"{list(metrics)[m]}: {list(metrics.values())[m]}")
+    return grid_metrics
+get_metrics(query_track, number_retrieved)
+        
+
+ir_system = st.radio(
+    "Select an IR system",
+    systems,
+    index=None,
+    horizontal=True,
+)
 
 if query_track is not None and ir_system is not None:
     recommended_track_ids = precomputed_similarities[ir_system][query_track.track_id][:number_retrieved]
