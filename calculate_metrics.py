@@ -8,6 +8,7 @@ from baseline_script import BaselineIRSystem, EvaluationProtocol, EvaluationMetr
 from text_irsystem import TextIRSystem
 from audio_irsystem import AudioIRSystem
 from visual_irsystem import VisualIRSystem
+from late_fusion_irsystem import LateFusionIRSystem
 from tqdm import tqdm
 
 
@@ -200,6 +201,7 @@ if __name__ == "__main__":
     audio_ir_musicnn = AudioIRSystem(tracks, feature_type='musicnn').set_name("Audio-MusicNN")
     visual_ir_resnet = VisualIRSystem(tracks, feature_type='resnet').set_name("Visual-ResNet")
     visual_ir_vgg = VisualIRSystem(tracks, feature_type='vgg19').set_name("Visual-VGG19")
+    late_fusion_ir = LateFusionIRSystem(tracks, [text_ir_bert, audio_ir_musicnn, visual_ir_resnet], [0.3 , 0.3, 0.4]).set_name('LateFusion-Bert-MusicNN-ResNet')
 
     # Initialize evaluation protocol
     evaluation_protocol = MetricsEvaluation(tracks)
@@ -214,7 +216,8 @@ if __name__ == "__main__":
         ("Audio-Spectral", audio_ir_spectral),
         ("Audio-MusicNN", audio_ir_musicnn),
         ("Visual-ResNet", visual_ir_resnet),
-        ("Visual-VGG19", visual_ir_vgg)
+        ("Visual-VGG19", visual_ir_vgg),
+        ("LateFusion-Bert-MusicNN-ResNet", late_fusion_ir)
     ]
 
 # music cnn compared with different stages of diversification

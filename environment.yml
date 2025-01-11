@@ -8,4 +8,5 @@ dependencies:
   - tqdm
   - streamlit
   - scikit-learn
-  - ast 
+  - ast
+  - scipy

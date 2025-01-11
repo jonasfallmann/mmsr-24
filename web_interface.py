@@ -3,6 +3,7 @@ from text_irsystem import TextIRSystem
 from audio_irsystem import AudioIRSystem
 from visual_irsystem import VisualIRSystem
 from text_irsystem import TextIRSystem
+from late_fusion_irsystem import LateFusionIRSystem
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -82,6 +83,7 @@ audio_ir_spectral = AudioIRSystem(tracks, feature_type='spectral')
 audio_ir_musicnn = AudioIRSystem(tracks, feature_type='musicnn')
 visual_ir_resnet = VisualIRSystem(tracks, feature_type='resnet')
 visual_ir_vgg = VisualIRSystem(tracks, feature_type='vgg19')
+late_fusion_ir = LateFusionIRSystem(tracks, [text_ir_bert, audio_ir_musicnn, visual_ir_resnet], [0.3 , 0.3, 0.4]).set_name('LateFusion-Bert-MusicNN-ResNet')
 
 # Precompute and store similarities
 def precompute_similarities(ir_systems, tracks):
@@ -116,7 +118,8 @@ ir_systems = {
     "Audio-Spectral": audio_ir_spectral,
     "Audio-MusicNN": audio_ir_musicnn,
     "Visual-ResNet": visual_ir_resnet,
-    "Visual-VGG19": visual_ir_vgg
+    "Visual-VGG19": visual_ir_vgg,
+    "LateFusion-Bert-MusicNN-ResNet": late_fusion_ir
 }
 
 if not os.path.exists("precomputed_similarities.pkl"):
@@ -139,7 +142,7 @@ option = st.selectbox(
 
 ir_system = st.radio(
     "Select an IR system",
-    ["Baseline", "Text-TF-IDF", "Text-BERT", "Audio-Spectral", "Audio-MusicNN", "Visual-ResNet", "Visual-VGG19"],
+    ["Baseline", "Text-TF-IDF", "Text-BERT", "Audio-Spectral", "Audio-MusicNN", "Visual-ResNet", "Visual-VGG19", "LateFusion-Bert-MusicNN-ResNet"],
     index=None,
     horizontal=True,
 )
