@@ -35,7 +35,7 @@ class LateFusionIRSystem(IRSystem):
         """
         similarities = []
         for irsys in self.systems:
-            similarity = irsys.query(query_track, late_fusion=True)
+            similarity = irsys.query(query_track, n, late_fusion=True)
             similarities.append(similarity)
         if self.weights:
             if len(self.weights) == 2:

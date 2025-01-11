@@ -98,7 +98,7 @@ def precompute_similarities(ir_systems, tracks):
         status_text.text(f"Precomputing similarities for {ir_system_name}, please wait...")
         similarities[ir_system_name] = {}
         for idx, track in enumerate(tracks):
-            recommended_tracks = ir_system.query(track)
+            recommended_tracks = ir_system.query(track, n=100)
             similarities[ir_system_name][track.track_id] = [rec.track_id for rec in recommended_tracks]
             system_progress_bar.progress((idx + 1) / total_tracks)
         overall_progress_bar.progress((system_idx + 1) / total_systems)
@@ -140,6 +140,8 @@ option = st.selectbox(
     placeholder = "Choose a query track",
 )
 
+number_retrieved = st.slider("How many songs do you want to retrieve?", 1, 100, 10)
+
 ir_system = st.radio(
     "Select an IR system",
     ["Baseline", "Text-TF-IDF", "Text-BERT", "Audio-Spectral", "Audio-MusicNN", "Visual-ResNet", "Visual-VGG19", "LateFusion-Bert-MusicNN-ResNet"],
@@ -158,7 +160,7 @@ else:
     query_track = None
 
 if query_track is not None and ir_system is not None:
-    recommended_track_ids = precomputed_similarities[ir_system][query_track.track_id]
+    recommended_track_ids = precomputed_similarities[ir_system][query_track.track_id][:number_retrieved]
     recommended_tracks = [track for track in tracks if track.track_id in recommended_track_ids]
 else:
     recommended_tracks = None
@@ -177,7 +179,7 @@ else:
     # metrics_grid[0][3].write("MRR: {:.2f}".format(evaluation["MRR"]))
 
     st.header("Top 10 most similar songs")
-    mygrid = make_grid(11,6)
+    mygrid = make_grid(number_retrieved+1,6)
     mygrid[0][0].write("Id")
     mygrid[0][1].write("Title")
     mygrid[0][2].write("Artist")
