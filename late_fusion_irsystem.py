@@ -3,7 +3,7 @@ import numpy as np
 from baseline_script import Track, IRSystem
 
 class LateFusionIRSystem(IRSystem):
-    def __init__(self, tracks, systems, weights=None):
+    def __init__(self, tracks: list[Track], systems: list[IRSystem], weights=None):
         """
         Initialize the late fusion IR system.
         
@@ -11,6 +11,7 @@ class LateFusionIRSystem(IRSystem):
             systems: List of IR system objects (e.g., TextIRSystem, VisualIRSystem).
             weights: List of weights for each system. Defaults to equal weighting.
         """
+        super().__init__(tracks)
         if len(systems) < 2:
             raise ValueError("You need to provide at least 2 ir systems for fusion")
         if weights:
@@ -35,16 +36,10 @@ class LateFusionIRSystem(IRSystem):
         """
         similarities = []
         for irsys in self.systems:
-            similarity = irsys.query(query_track, n, late_fusion=True)
+            similarity = irsys.calculate_similarities(query_track)
             similarities.append(similarity)
         if self.weights:
-            if len(self.weights) == 2:
-                ir1_sim, ir2_sim = similarities
-                combined_similarities = self.weights[0]*ir1_sim + self.weights[1]*ir2_sim
-
-            if len(self.weights) == 3:
-                ir1_sim, ir2_sim, ir3_sim = similarities
-                combined_similarities = self.weights[0]*ir1_sim + self.weights[1]*ir2_sim + self.weights[2]*ir3_sim
+            combined_similarities = np.average(similarities, axis=0, weights=self.weights)
         else:   
             combined_similarities = sum(similarities)/len(similarities)
         query_idx = self.tracks.index(query_track) if query_track in self.tracks else -1
@@ -52,5 +47,8 @@ class LateFusionIRSystem(IRSystem):
         
         if query_idx != -1:
             top_indices = top_indices[top_indices != query_idx]
-        return [self.tracks[idx] for idx in top_indices[:n]]
+
+        probabilities = combined_similarities[top_indices]
+
+        return [self.tracks[idx] for idx in top_indices[:n]], probabilities[:n]
     

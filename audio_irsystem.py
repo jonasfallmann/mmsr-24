@@ -62,7 +62,7 @@ class AudioIRSystem(IRSystem):
         self.genre_vectors = genre_vectors
         self.n_diverse = n_diverse
     
-    def query(self, query: Track, n=10, late_fusion=False):
+    def query(self, query: Track, n=10):
         """Find n most similar tracks based on chosen audio features"""
         # Get the appropriate vector based on feature type
         vector_attr = 'spectral_vector' if self.feature_type == 'spectral' else 'musicnn_vector'
@@ -71,8 +71,13 @@ class AudioIRSystem(IRSystem):
         if query_vector is None:
             raise ValueError(f"Query track does not have {self.feature_type} vector")
 
-        diversification_vectors = []
+
+        top_indices, similarities = self.get_top_indices(query, query_vector)[:n]
+
+        # if diversification is enabled, get top indices for diversification vectors and replace the last n_diverse tracks
+        # with the diversified tracks
         if self.diversification > 0:
+            diversification_vectors = []
             # get the mean vector of the query vector genres
             query_genres = query.top_genres
             query_genre_vector = np.mean([self.genre_vectors[genre] for genre in query_genres], axis=0)
@@ -85,20 +90,11 @@ class AudioIRSystem(IRSystem):
             # get the top 5 genre vectors that are furthest away
             furthest_genre_indices = np.argsort(genre_distances)[:5]
             furthest_vectors = genre_vectors[furthest_genre_indices]
-            #furthest_genres = [list(self.genre_vectors.keys())[i] for i in furthest_genre_indices]
+            # furthest_genres = [list(self.genre_vectors.keys())[i] for i in furthest_genre_indices]
 
             # calculate query vectors, each being pulled toward one of the furthest genre vectors
             for vector in furthest_vectors:
                 diversification_vectors.append(query_vector + self.diversification * (vector - query_vector))
-
-
-        top_indices = self.get_top_indices(query, query_vector, n, late_fusion)
-        if late_fusion:
-            return top_indices
-
-        # if diversification is enabled, get top indices for diversification vectors and replace the last n_diverse tracks
-        # with the diversified tracks
-        if self.diversification > 0:
             distribution = self.distribute_integer(self.n_diverse, len(diversification_vectors))
             # drop last n_diverse tracks
             replacement_indices = np.zeros(self.n_diverse, dtype=int)
@@ -115,13 +111,35 @@ class AudioIRSystem(IRSystem):
                     top_idx += 1
             top_indices[-self.n_diverse:] = replacement_indices
 
-        return [self.tracks[idx] for idx in top_indices[:n]]
+        probabilities = similarities[top_indices]
 
-    def get_top_indices(self, query, query_vector, n, late_fusion=False):
+        return [self.tracks[idx] for idx in top_indices[:n]], probabilities[:n]
+
+    def calculate_similarities(self, query: Track) -> list[float] | np.ndarray:
+        """
+        Calculate the cosine similarities between the query track and all tracks in the dataset
+
+        Args:
+            query: Query Track object
+
+        Returns:
+            list[float] | np.ndarray: List of cosine similarities
+        """
+        # Get the appropriate vector based on feature type
+        vector_attr = 'spectral_vector' if self.feature_type == 'spectral' else 'musicnn_vector'
+        query_vector = getattr(query, vector_attr)
+
+        if query_vector is None:
+            raise ValueError(f"Query track does not have {self.feature_type} vector")
+
         query_vector = query_vector.reshape(1, -1)
         similarities = cosine_similarity(query_vector, self.embedding_matrix)[0]
-        if late_fusion:
-            return similarities
+
+        return similarities
+
+    def get_top_indices(self, query, query_vector):
+        query_vector = query_vector.reshape(1, -1)
+        similarities = cosine_similarity(query_vector, self.embedding_matrix)[0]
 
         # Handle case where query track is in the dataset
         query_idx = self.tracks.index(query) if query in self.tracks else -1
@@ -129,7 +147,8 @@ class AudioIRSystem(IRSystem):
 
         if query_idx != -1:
             top_indices = top_indices[top_indices != query_idx]
-        return top_indices[:n]
+
+        return top_indices, similarities
 
     def distribute_integer(self, total, workers):
         # Basic division

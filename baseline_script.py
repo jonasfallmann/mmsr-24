@@ -1,10 +1,20 @@
 # %%
+from enum import Enum
+
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from ast import literal_eval
 from typing import Protocol
 from scipy.stats import rankdata
+
+class FeatureType(Enum):
+    TFIDF = 'tfidf'
+    BERT = 'bert'
+    SPECTRAL = 'spectral'
+    MUSICNN = 'musicnn'
+    RESNET = 'resnet'
+    VGG19 = 'vgg19'
 
 
 class Tag:
@@ -119,20 +129,23 @@ class EvaluationProtocol(Protocol):
     def evaluate(self, ir_system):
         pass
 
-# %%
+
 class IRSystem:
     def __init__(self, tracks):
         self.tracks = tracks
         self.name = ""
 
-    def query(self, query: Track, n=10):
+    def query(self, query: Track, n=10) -> (list[Track], list[float]):
         pass
 
     def set_name(self, name):
         self.name = name
         return self
 
-# %%
+    def calculate_similarities(self, query: Track) -> list[float] | np.ndarray:
+        pass
+
+
 class BaselineIRSystem(IRSystem):
     def __init__(self, tracks):
         super().__init__(tracks)
@@ -140,7 +153,10 @@ class BaselineIRSystem(IRSystem):
     def query(self, query: Track, n = 10):
         # return n random tracks, excluding the query track
         remaining_tracks = [t for t in self.tracks if t.track_id != query.track_id]
-        return np.random.choice(remaining_tracks, n, replace=False).tolist()
+        return np.random.choice(remaining_tracks, n, replace=False).tolist(), np.random.rand(n)
+
+    def calculate_similarities(self, query: Track) -> list[float] | np.ndarray:
+        return np.random.rand(len(self.tracks))
 
 
 def preprocess(
@@ -225,6 +241,8 @@ def preprocess(
         tags = tags_df.loc[tags_df['id'] == track_id, '(tag, weight)'].values[0]
         tags = literal_eval(tags) if tags else {}
         tags = [Tag(tag, weight) for tag, weight in tags.items()]
+        # order tags by weight
+        tags = sorted(tags, key=lambda x: x.weight, reverse=True)
         
         # Create track object
         track = Track(

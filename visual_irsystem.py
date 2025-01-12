@@ -54,7 +54,7 @@ class VisualIRSystem(IRSystem):
         self.embedding_matrix = np.vstack([getattr(track, vector_attr).reshape(1, -1) 
                                          for track in valid_tracks])
     
-    def query(self, query: Track, n=10, late_fusion=False):
+    def query(self, query: Track, n=10):
         """Find n most similar tracks based on chosen visual features"""
         # Get the appropriate vector based on feature type
         vector_attr = 'resnet_vector' if self.feature_type == 'resnet' else 'vgg19_vector'
@@ -65,8 +65,6 @@ class VisualIRSystem(IRSystem):
             
         query_vector = query_vector.reshape(1, -1)
         similarities = cosine_similarity(query_vector, self.embedding_matrix)[0]
-        if late_fusion:
-            return similarities
         
         # Handle case where query track is in the dataset
         query_idx = self.tracks.index(query) if query in self.tracks else -1
@@ -74,5 +72,29 @@ class VisualIRSystem(IRSystem):
         
         if query_idx != -1:
             top_indices = top_indices[top_indices != query_idx]
+
+        probabilities = similarities[top_indices]
         
-        return [self.tracks[idx] for idx in top_indices[:n]]
+        return [self.tracks[idx] for idx in top_indices[:n]], probabilities[:n]
+
+    def calculate_similarities(self, query: Track) -> list[float] | np.ndarray:
+        """
+        Calculate the cosine similarities between the query track and all tracks in the dataset
+
+        Args:
+            query: Query Track object
+
+        Returns:
+            List of cosine similarities
+        """
+        # Get the appropriate vector based on feature type
+        vector_attr = 'resnet_vector' if self.feature_type == 'resnet' else 'vgg19_vector'
+        query_vector = getattr(query, vector_attr)
+
+        if query_vector is None:
+            raise ValueError(f"Query track does not have {self.feature_type} vector")
+
+        query_vector = query_vector.reshape(1, -1)
+        similarities = cosine_similarity(query_vector, self.embedding_matrix)[0]
+
+        return similarities

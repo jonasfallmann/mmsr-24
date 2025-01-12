@@ -4,25 +4,16 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.decomposition import PCA, FastICA
 from sklearn.manifold import TSNE
 
-import baseline_script
-from baseline_script import IRSystem
+from baseline_script import IRSystem, FeatureType, Track
 
 
 # define an enum for type of feature
-class FeatureType(Enum):
-    TFIDF = 'tfidf'
-    BERT = 'bert'
-    SPECTRAL = 'spectral'
-    MUSICNN = 'musicnn'
-    RESNET = 'resnet'
-    VGG19 = 'vgg19'
-
 class ReducerType(Enum):
     PCA = 'pca'
     ICA = 'ica'
 
 class EarlyFusionIrSystem(IRSystem):
-    def __init__(self,  tracks: list[baseline_script.Track], featureSet1: FeatureType, featureSet2: FeatureType, n_dims=-1, reducer: ReducerType = ReducerType.PCA):
+    def __init__(self,  tracks: list[Track], featureSet1: FeatureType, featureSet2: FeatureType, n_dims=-1, reducer: ReducerType = ReducerType.PCA):
         """
         Initialize an IR system that uses early fusion of two feature sets
 
@@ -49,7 +40,7 @@ class EarlyFusionIrSystem(IRSystem):
 
 
 
-    def query(self, query: baseline_script.Track, n=10):
+    def query(self, query: Track, n=10):
         """
         Find n most similar tracks based on early fused features
 
@@ -75,9 +66,31 @@ class EarlyFusionIrSystem(IRSystem):
         query_idx = self.tracks.index(query) if query in self.tracks else -1
         if query_idx != -1:
             indices = indices[indices != query_idx]
+            # also remove the query track from the probabilities
+
+        probabilities = similarities[indices]
 
         # Return n most similar tracks
-        return [self.tracks[i] for i in indices[:n]]
+        return [self.tracks[i] for i in indices[:n]], probabilities[:n]
+
+    def calculate_similarities(self, query: Track) -> list[float] | np.ndarray:
+        """
+        Calculate the cosine similarities between the query track and all tracks in the dataset
+
+        Args:
+            query: Query Track object
+
+        Returns:
+            list[float] | np.ndarray: List of cosine similarities
+        """
+        # Get the appropriate vector based on feature type
+        query_vector = self.to_fused_vector([query])
+        if self.dimensionality_reducer is not None:
+            query_vector = self.dimensionality_reducer.transform(query_vector)
+
+        similarities = cosine_similarity(query_vector, self.embedding_matrix)[0]
+
+        return similarities
 
 
     def prepare_dimensionality_reducer(self, matrix: np.ndarray):
@@ -90,7 +103,7 @@ class EarlyFusionIrSystem(IRSystem):
             return dimensionality_reducer
         return None
 
-    def to_fused_vector(self, tracks: list[baseline_script.Track]):
+    def to_fused_vector(self, tracks: list[Track]):
         """
         Convert a list of tracks to a fused feature vector
 
@@ -111,7 +124,7 @@ class EarlyFusionIrSystem(IRSystem):
         concatenated = np.hstack([feature_vectors1, feature_vectors2])
         return concatenated
 
-    def select_feature_vectors(self, featureSet: FeatureType, tracks: list[baseline_script.Track]):
+    def select_feature_vectors(self, featureSet: FeatureType, tracks: list[Track]):
         match featureSet:
             case FeatureType.TFIDF:
                 return [track.tfidf_vector for track in tracks]

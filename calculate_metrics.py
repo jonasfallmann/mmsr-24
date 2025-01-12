@@ -3,18 +3,18 @@ from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 import numpy as np
 
-import baseline_script
-from baseline_script import BaselineIRSystem, EvaluationProtocol, EvaluationMetric, preprocess
-from early_fusion_irsystem import EarlyFusionIrSystem, FeatureType, ReducerType
+from baseline_script import BaselineIRSystem, EvaluationProtocol, EvaluationMetric, preprocess, FeatureType, Track
+from diversity_rerank import DiversityRerank
+from early_fusion_irsystem import EarlyFusionIrSystem
 from text_irsystem import TextIRSystem
 from audio_irsystem import AudioIRSystem
 from visual_irsystem import VisualIRSystem
 from late_fusion_irsystem import LateFusionIRSystem
-from tqdm import tqdm
 
 
 class PrecisionAtK(EvaluationMetric):
     def __init__(self, k=10):
+        super().__init__()
         self.k = k
 
     def evaluate(self, recommended_tracks, relevant_tracks):
@@ -27,6 +27,7 @@ class PrecisionAtK(EvaluationMetric):
 
 class RecallAtK(EvaluationMetric):
     def __init__(self, k=10):
+        super().__init__()
         self.k = k
 
     def evaluate(self, recommended_tracks, relevant_tracks):
@@ -39,15 +40,16 @@ class RecallAtK(EvaluationMetric):
 
 class NDCGAtK(EvaluationMetric):
     def __init__(self, k=10):
+        super().__init__()
         self.k = k
 
     def evaluate(self, recommended_tracks, relevant_tracks):
         def dcg(recommended, relevant, k):
             return sum((1 / np.log2(idx + 2)) for idx, track in enumerate(recommended[:k]) if track in relevant)
-        
+
         def idcg(relevant, k):
             return sum((1 / np.log2(idx + 2)) for idx in range(min(k, len(relevant))))
-        
+
         dcg_value = dcg(recommended_tracks, relevant_tracks, self.k)
         idcg_value = idcg(relevant_tracks, self.k)
         return dcg_value / idcg_value if idcg_value > 0 else 0
@@ -55,7 +57,7 @@ class NDCGAtK(EvaluationMetric):
 
 class MRR(EvaluationMetric):
     def __init__(self):
-        pass
+        super().__init__()
 
     def evaluate(self, recommended_tracks, relevant_tracks):
         for idx, track in enumerate(recommended_tracks):
@@ -69,15 +71,17 @@ class Popularity(EvaluationMetric):
         pass
 
     def evaluate(self, recommended_tracks, _):
-        return sum([track.popularity for track in recommended_tracks])/len(recommended_tracks)
+        return sum([track.popularity for track in recommended_tracks]) / len(recommended_tracks)
 
 
 class DiversityAtK(EvaluationMetric):
-    def __init__(self, k=10, threshold = 50):
+    def __init__(self, k=10, threshold=50, max_tags=-1):
+        super().__init__()
         self.k = k
         self.threshold = threshold
+        self.max_tags = int(max_tags)
 
-    def evaluate(self, recommended_tracks: list[baseline_script.Track], _):
+    def evaluate(self, recommended_tracks: list[Track], _):
         # considering all provided tags (excluding genre) per song, average number of unique tag occurences
         # among retrieved documents
         occurring_tags = []
@@ -86,15 +90,30 @@ class DiversityAtK(EvaluationMetric):
             if track.tags is None:
                 continue
 
-            # ignore tags that are a genre
-            occurring_tags.extend([tag.tag for tag in track.tags if tag.tag not in track.genres and tag.weight > self.threshold])
+            filtered_tags = [tag for tag in track.tags if tag.tag not in track.genres and tag.weight > self.threshold]
+            filtered_tags = filtered_tags[:self.max_tags] if self.max_tags > 0 else filtered_tags
+            occurring_tags.extend(filtered_tags)
         tags_set = set(occurring_tags)
-        return len(tags_set) / self.k
+        return len(tags_set) / (self.k * self.max_tags if self.max_tags > 0 else 1)
 
 
 class MetricsEvaluation(EvaluationProtocol):
     def __init__(self, tracks):
+        super().__init__()
         self.tracks = tracks
+        # calculate median tag weight
+        tag_weights = []
+        tag_sizes = []
+        for track in tracks:
+            if track.tags is not None:
+                tag_weights.extend([tag.weight for tag in track.tags])
+                tag_sizes.append(len(track.tags))
+
+        median = np.median(tag_weights)
+        self.tag_threshold = median if isinstance(median, np.float64) else median.item()
+
+        tag_size_median = np.median(tag_sizes)
+        self.tag_size_threshold = tag_size_median if isinstance(tag_size_median, np.float64) else tag_size_median.item()
 
     def evaluate(self, ir_system, k=10):
         precision_scores = []
@@ -104,10 +123,17 @@ class MetricsEvaluation(EvaluationProtocol):
         popularity_scores = []
         diversity_scores = []
 
+        precision_metric = PrecisionAtK(k)
+        recall_metric = RecallAtK(k)
+        ndcg_metric = NDCGAtK(k)
+        mrr_metric = MRR()
+        popularity_metric = Popularity()
+        diversity_metric = DiversityAtK(k, threshold=self.tag_threshold, max_tags=self.tag_size_threshold)
+
         for index, query_track in enumerate(self.tracks):
             # print progress every 10%
             if index % (len(self.tracks) // 10) == 0:
-                print(f"[{ir_system.name}] Progress: {index/len(self.tracks)*100:.2f}%")
+                print(f"[{ir_system.name}] Progress: {index / len(self.tracks) * 100:.2f}%")
 
             relevant_ids = [
                 track.track_id
@@ -116,16 +142,9 @@ class MetricsEvaluation(EvaluationProtocol):
                     any(top_genre in track.top_genres for top_genre in query_track.top_genres)
                 )
             ]
-            
-            recommended_tracks = ir_system.query(query_track, n=k)
-            recommended_ids = [track.track_id for track in recommended_tracks]
 
-            precision_metric = PrecisionAtK(k)
-            recall_metric = RecallAtK(k)
-            ndcg_metric = NDCGAtK(k)
-            mrr_metric = MRR()
-            popularity_metric = Popularity()
-            diversity_metric = DiversityAtK(k)
+            recommended_tracks, probabilities = ir_system.query(query_track, n=k)
+            recommended_ids = [track.track_id for track in recommended_tracks]
 
             precision = precision_metric.evaluate(recommended_ids, relevant_ids)
             recall = recall_metric.evaluate(recommended_ids, relevant_ids)
@@ -151,11 +170,44 @@ class MetricsEvaluation(EvaluationProtocol):
             "Diversity": np.mean(diversity_scores)
         }
         return results
-    
+
+
+def run_full_early_fusion_experiment(tasks):
+    # add all combinations of early fusion systems with full dimensions and 100 dimensions
+    for idx, feature1 in enumerate(FeatureType):
+        for jdx, feature2 in enumerate(FeatureType):
+            if idx >= jdx:
+                continue
+            early_fusion_irsystem = EarlyFusionIrSystem(tracks, feature1, feature2).set_name(
+                f"Early Fusion {feature1.value}+{feature2.value} Full Dimension")
+            early_fusion_irsystem_100 = EarlyFusionIrSystem(tracks, feature1, feature2, n_dims=100).set_name(
+                f"Early Fusion {feature1.value}+{feature2.value} 100 Dimensions")
+            tasks.append((early_fusion_irsystem.name, early_fusion_irsystem))
+            tasks.append((early_fusion_irsystem_100.name, early_fusion_irsystem_100))
+
+
+def run_intrinsic_diversification_experiment(tasks):
+    # music cnn compared with different stages of diversification
+    for diversification in [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.15, 0.2]:
+        system = AudioIRSystem(tracks, feature_type='musicnn', diversification=diversification, n_diverse=5).set_name(
+            f"Audio-MusicNN-{diversification}")
+        tasks.append((f"Audio-MusicNN-{diversification}", system))
+
+
+def run_diversification_rerate_experiment(tasks):
+    # rerate with different dissimilarity features
+    for dissimilarity_feature in [FeatureType.TFIDF]:
+        for diversification in [0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
+            system = DiversityRerank(tracks, audio_ir_musicnn, diversification=diversification,
+                                     dissimilarity_feature=dissimilarity_feature, pool_multiple=10).set_name(
+                f"Audio-MusicNN-Diversification-{diversification}-{dissimilarity_feature}")
+            tasks.append((f"Audio-MusicNN-Diversification-{diversification}-{dissimilarity_feature}", system))
+
+
 if __name__ == "__main__":
     # Load all necessary data
     print("Loading datasets...")
-    
+
     # Basic information
     basic_info_df = pd.read_csv("dataset/id_information_mmsr.tsv", sep='\t')
     youtube_urls_df = pd.read_csv("dataset/id_url_mmsr.tsv", sep='\t')
@@ -163,15 +215,15 @@ if __name__ == "__main__":
     tags_df = pd.read_csv("dataset/id_tags_dict.tsv", sep='\t')
     spotify_df = pd.read_csv('dataset/id_metadata_mmsr.tsv', sep='\t')
     lastfm_df = pd.read_csv('dataset/id_total_listens.tsv', sep='\t')
-    
+
     # Text features
     tfidf_df = pd.read_csv("dataset/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
     bert_df = pd.read_csv("dataset/id_lyrics_bert_mmsr.tsv", sep='\t', index_col=0)
-    
+
     # Audio features
     spectral_df = pd.read_csv("dataset/id_blf_spectral_mmsr.tsv", sep='\t', index_col=0)
     musicnn_df = pd.read_csv("dataset/id_musicnn_mmsr.tsv", sep='\t', index_col=0)
-    
+
     # Visual features
     resnet_df = pd.read_csv("dataset/id_resnet_mmsr.tsv", sep='\t', index_col=0)
     vgg19_df = pd.read_csv("dataset/id_vgg19_mmsr.tsv", sep='\t', index_col=0)
@@ -179,7 +231,7 @@ if __name__ == "__main__":
     # Preprocess tracks
     print("Preprocessing tracks...")
     tracks = preprocess(
-        basic_info_df, 
+        basic_info_df,
         youtube_urls_df,
         tfidf_df,
         genres_df,
@@ -203,8 +255,13 @@ if __name__ == "__main__":
     visual_ir_resnet = VisualIRSystem(tracks, feature_type='resnet').set_name("Visual-ResNet")
     visual_ir_vgg = VisualIRSystem(tracks, feature_type='vgg19').set_name("Visual-VGG19")
     # set to 100 dims as this is way faster to compute with marginal loss in performance
-    early_fusion_irsystem = EarlyFusionIrSystem(tracks, FeatureType.BERT, FeatureType.MUSICNN, n_dims=100).set_name("Early Fusion BERT+MusicNN 100")
-    late_fusion_ir = LateFusionIRSystem(tracks, [text_ir_bert, audio_ir_musicnn, visual_ir_resnet], [0.3 , 0.3, 0.4]).set_name('LateFusion-Bert-MusicNN-ResNet')
+    early_fusion_irsystem = EarlyFusionIrSystem(tracks, FeatureType.BERT, FeatureType.MUSICNN, n_dims=100).set_name(
+        "Early Fusion BERT+MusicNN 100")
+    late_fusion_ir = LateFusionIRSystem(tracks, [text_ir_bert, audio_ir_musicnn, visual_ir_resnet],
+                                        [0.3, 0.3, 0.4]).set_name('LateFusion-Bert-MusicNN-ResNet')
+    diversification_irsystem = DiversityRerank(tracks=tracks, ir_system=audio_ir_musicnn, diversification=0.5,
+                                               dissimilarity_feature=FeatureType.TFIDF).set_name(
+        "Audio-MusicNN-Diversification")
 
     # Initialize evaluation protocol
     evaluation_protocol = MetricsEvaluation(tracks)
@@ -220,9 +277,11 @@ if __name__ == "__main__":
         ("Audio-MusicNN", audio_ir_musicnn),
         ("Visual-ResNet", visual_ir_resnet),
         ("Visual-VGG19", visual_ir_vgg),
-        ("Early Fusion BERT+MusicNN 100", early_fusion_irsystem)
+        ("Early Fusion BERT+MusicNN 100", early_fusion_irsystem),
         ("LateFusion-Bert-MusicNN-ResNet", late_fusion_ir)
-     ]
+    ]
+
+    # run_diversification_rerate_experiment(tasks)
 
     with ThreadPoolExecutor() as executor:
         futures = [executor.submit(evaluation_protocol.evaluate, ir_system) for _, ir_system in tasks]
@@ -244,24 +303,3 @@ if __name__ == "__main__":
     for metric in metrics_list:
         best_system = max(results.items(), key=lambda x: x[1][metric])
         print(f"\nBest {metric}: {best_system[0]} ({best_system[1][metric]:.4f})")
-
-
-def run_full_early_fusion_experiment(tasks):
-    # add all combinations of early fusion systems with full dimensions and 100 dimensions
-    for idx, feature1 in enumerate(FeatureType):
-        for jdx, feature2 in enumerate(FeatureType):
-            if idx >= jdx:
-                continue
-            early_fusion_irsystem = EarlyFusionIrSystem(tracks, feature1, feature2).set_name(
-                f"Early Fusion {feature1.value}+{feature2.value} Full Dimension")
-            early_fusion_irsystem_100 = EarlyFusionIrSystem(tracks, feature1, feature2, n_dims=100).set_name(
-                f"Early Fusion {feature1.value}+{feature2.value} 100 Dimensions")
-            tasks.append((early_fusion_irsystem.name, early_fusion_irsystem))
-            tasks.append((early_fusion_irsystem_100.name, early_fusion_irsystem_100))
-
-
-def run_diversification_experiment(tasks):
-    #music cnn compared with different stages of diversification
-    for diversification in [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.15, 0.2]:
-        system = AudioIRSystem(tracks, feature_type='musicnn', diversification=diversification, n_diverse=5).set_name(f"Audio-MusicNN-{diversification}")
-        tasks.append((f"Audio-MusicNN-{diversification}", system))
