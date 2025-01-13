@@ -168,14 +168,13 @@ mrr = calculate_metrics.MRR()
 popularity = calculate_metrics.Popularity()
 diversity = calculate_metrics.DiversityAtK(k=100)
 systems = ["Baseline", "Text-TF-IDF", "Text-BERT", "Audio-Spectral", "Audio-MusicNN", "Visual-ResNet", "Visual-VGG19", "LateFusion-Bert-MusicNN-ResNet"]
-# Hier performance einfügen
-@st.cache_resource
-def get_metrics(_query_track, number_retrieved):
+
+def get_metrics(query_track, number_retrieved):
     grid_metrics = make_grid(len(systems), 7)
     for system in systems:
-        metrics_recommended_track_ids = precomputed_similarities[system][_query_track.track_id][:number_retrieved]
+        metrics_recommended_track_ids = precomputed_similarities[system][query_track.track_id][:number_retrieved]
         metrics_recommended_tracks = [track for track in tracks if track.track_id in metrics_recommended_track_ids]
-        metric_relevant_ids = [track.track_id for track in metrics_recommended_tracks if (any(top_genre in track.top_genres for top_genre in _query_track.top_genres))]
+        metric_relevant_ids = [track.track_id for track in metrics_recommended_tracks if (any(top_genre in track.top_genres for top_genre in query_track.top_genres))]
         p = round(precision.evaluate(metrics_recommended_track_ids, metric_relevant_ids),4)
         r = round(recall.evaluate(metrics_recommended_track_ids, metric_relevant_ids),4)
         n = round(ndcg.evaluate(metrics_recommended_track_ids, metric_relevant_ids),4)
@@ -187,7 +186,10 @@ def get_metrics(_query_track, number_retrieved):
         for m in range(len(metrics)):
             grid_metrics[systems.index(system)][m+1].write(f"{list(metrics)[m]}: {list(metrics.values())[m]}")
     return grid_metrics
-get_metrics(query_track, number_retrieved)
+
+if query_track is not None:
+    with st.expander("Metrics for your chosen song at N across IR Systems"):
+        get_metrics(query_track, number_retrieved)
         
 
 ir_system = st.radio(
