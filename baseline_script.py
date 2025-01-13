@@ -15,6 +15,7 @@ class FeatureType(Enum):
     MUSICNN = 'musicnn'
     RESNET = 'resnet'
     VGG19 = 'vgg19'
+    CLAP = 'clap'
 
 
 class Tag:
@@ -52,6 +53,7 @@ class Track:
         Audio Features:
         spectral_vector: Spectral pattern features from BLF
         musicnn_vector: Deep learning features from MusicNN
+        clap_vector: Microsoft CLAP features
         
         Visual Features:
         resnet_vector: ResNet features from video frames
@@ -73,6 +75,7 @@ class Track:
         bert_vector=None,
         spectral_vector=None,
         musicnn_vector=None,
+        clap_vector=None,
         resnet_vector=None,
         vgg19_vector=None,
         genres=None,
@@ -94,6 +97,7 @@ class Track:
         # Audio features
         self.spectral_vector = spectral_vector
         self.musicnn_vector = musicnn_vector
+        self.clap_vector = clap_vector
         
         # Visual features
         self.resnet_vector = resnet_vector
@@ -170,6 +174,7 @@ def preprocess(
     bert_df: pd.DataFrame = None,
     spectral_df: pd.DataFrame = None,
     musicnn_df: pd.DataFrame = None,
+    clap_df: pd.DataFrame = None,
     resnet_df: pd.DataFrame = None,
     vgg19_df: pd.DataFrame = None
 ):
@@ -185,6 +190,7 @@ def preprocess(
         bert_df: DataFrame with BERT embeddings
         spectral_df: DataFrame with spectral audio features
         musicnn_df: DataFrame with MusicNN features
+        clap_df: DataFrame with Microsoft CLAP features
         resnet_df: DataFrame with ResNet features
         vgg19_df: DataFrame with VGG19 features
     
@@ -227,6 +233,7 @@ def preprocess(
         # Audio features
         spectral_vector = spectral_df.loc[track_id].values if spectral_df is not None and track_id in spectral_df.index else None
         musicnn_vector = musicnn_df.loc[track_id].values if musicnn_df is not None and track_id in musicnn_df.index else None
+        clap_vector = clap_df.loc[track_id].values if clap_df is not None and track_id in clap_df.index else None
         
         # Visual features
         resnet_vector = resnet_df.loc[track_id].values if resnet_df is not None and track_id in resnet_df.index else None
@@ -255,6 +262,7 @@ def preprocess(
             bert_vector=bert_vector,
             spectral_vector=spectral_vector,
             musicnn_vector=musicnn_vector,
+            clap_vector=clap_vector,
             resnet_vector=resnet_vector,
             vgg19_vector=vgg19_vector,
             genres=genres,
@@ -265,5 +273,3 @@ def preprocess(
         tracks.append(track)
     
     return tracks
-
-

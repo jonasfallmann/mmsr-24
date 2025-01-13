@@ -37,7 +37,8 @@ def download_audio(video_id, url, output_folder):
         return None
 
 def download_audio_from_tsv(tsv_file_path, output_folder):
-    download_times = []
+    download_count = 0
+    start_processing_time = time.time()
 
     # Open the TSV file
     with open(tsv_file_path, mode='r') as tsvfile:
@@ -59,11 +60,15 @@ def download_audio_from_tsv(tsv_file_path, output_folder):
             for future in as_completed(futures):
                 download_time = future.result()
                 if download_time is not None:
-                    download_times.append(download_time)
+                    download_count += 1
+                    elapsed_time = time.time() - start_processing_time
+                    average_time = elapsed_time / download_count
+                    print(f"Current average download time: {average_time:.2f} seconds")
 
-    if download_times:
-        average_time = sum(download_times) / len(download_times)
-        print(f"Average download time: {average_time:.2f} seconds")
+    if download_count > 0:
+        total_elapsed_time = time.time() - start_processing_time
+        final_average_time = total_elapsed_time / download_count
+        print(f"Final average download time: {final_average_time:.2f} seconds")
     else:
         print("No downloads were completed.")
 

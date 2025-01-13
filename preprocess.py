@@ -20,6 +20,7 @@ def load_data_and_preprocess() -> list[Track]:
     # Audio features
     spectral_df = pd.read_csv("dataset/id_blf_spectral_mmsr.tsv", sep='\t', index_col=0)
     musicnn_df = pd.read_csv("dataset/id_musicnn_mmsr.tsv", sep='\t', index_col=0)
+    clap_df = pd.read_csv("dataset/id_clap_mmsr.tsv", sep='\t', index_col=0)
 
     # Visual features
     resnet_df = pd.read_csv("dataset/id_resnet_mmsr.tsv", sep='\t', index_col=0)
@@ -38,6 +39,7 @@ def load_data_and_preprocess() -> list[Track]:
         bert_df,
         spectral_df,
         musicnn_df,
+        clap_df,
         resnet_df,
         vgg19_df
     )

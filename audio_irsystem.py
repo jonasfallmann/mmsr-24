@@ -4,7 +4,7 @@ from baseline_script import Track, IRSystem, preprocess
 
 class AudioIRSystem(IRSystem):
     """
-    Audio Information Retrieval System that can use either Spectral or MusicNN features.
+    Audio Information Retrieval System that can use either Spectral, MusicNN, or CLAP features.
     
     Spectral Features (BLF - Block-Level Features):
     - Captures frequency content and patterns in the audio
@@ -21,25 +21,32 @@ class AudioIRSystem(IRSystem):
         1. Neural embeddings typically work best with cosine similarity
         2. The features are dense and directional
         3. The magnitude is less important than the pattern it represents
+
+    CLAP:
+    - Contrastive Language-Audio Pretraining embeddings
+    - Joint audio-text embeddings for better semantic understanding
+    - Uses cosine similarity because:
+        1. Embeddings are dense and directional
+        2. Magnitude is less important than the pattern it represents
     """
     
     def __init__(self, tracks, feature_type='spectral', diversification = 0.0, n_diverse = 0):
         """
-        Initialize Audio IR System with either Spectral or MusicNN features
+        Initialize Audio IR System with either Spectral, MusicNN, or CLAP features
         
         Args:
             tracks: List of Track objects
-            feature_type: 'spectral' or 'musicnn'
+            feature_type: 'spectral', 'musicnn', or 'clap'
         """
         super().__init__(tracks)
         self.feature_type = feature_type.lower()
         
         # Validate feature type
-        if self.feature_type not in ['spectral', 'musicnn']:
-            raise ValueError("feature_type must be either 'spectral' or 'musicnn'")
+        if self.feature_type not in ['spectral', 'musicnn', 'clap']:
+            raise ValueError("feature_type must be either 'spectral', 'musicnn', or 'clap'")
         
         # Select the appropriate vector attribute
-        vector_attr = 'spectral_vector' if self.feature_type == 'spectral' else 'musicnn_vector'
+        vector_attr = 'spectral_vector' if self.feature_type == 'spectral' else 'musicnn_vector' if self.feature_type == 'musicnn' else 'clap_vector'
         
         # Filter valid tracks and create matrix
         valid_tracks = [track for track in tracks if getattr(track, vector_attr) is not None]
@@ -65,7 +72,7 @@ class AudioIRSystem(IRSystem):
     def query(self, query: Track, n=10):
         """Find n most similar tracks based on chosen audio features"""
         # Get the appropriate vector based on feature type
-        vector_attr = 'spectral_vector' if self.feature_type == 'spectral' else 'musicnn_vector'
+        vector_attr = 'spectral_vector' if self.feature_type == 'spectral' else 'musicnn_vector' if self.feature_type == 'musicnn' else 'clap_vector'
         query_vector = getattr(query, vector_attr)
         
         if query_vector is None:
@@ -126,7 +133,7 @@ class AudioIRSystem(IRSystem):
             list[float] | np.ndarray: List of cosine similarities
         """
         # Get the appropriate vector based on feature type
-        vector_attr = 'spectral_vector' if self.feature_type == 'spectral' else 'musicnn_vector'
+        vector_attr = 'spectral_vector' if self.feature_type == 'spectral' else 'musicnn_vector' if self.feature_type == 'musicnn' else 'clap_vector'
         query_vector = getattr(query, vector_attr)
 
         if query_vector is None:
