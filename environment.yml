@@ -11,4 +11,6 @@ dependencies:
   - ast
   - scipy
   - yt-dlp
-  - msclap
+  - pip
+  - pip:
+      - msclap
