@@ -4,13 +4,13 @@ from audio_irsystem import AudioIRSystem
 from visual_irsystem import VisualIRSystem
 from text_irsystem import TextIRSystem
 from late_fusion_irsystem import LateFusionIRSystem
-import calculate_metrics
 import streamlit as st
 import pandas as pd
 import numpy as np
 import re
 import pickle
 import os
+from metrics import PrecisionAtK, RecallAtK, NDCGAtK, MRR, Popularity, DiversityAtK
 
 # web interface
 st.set_page_config(layout="wide")
@@ -105,7 +105,7 @@ def precompute_similarities(ir_systems, tracks):
         status_text.text(f"Precomputing similarities for {ir_system_name}, please wait...")
         similarities[ir_system_name] = {}
         for idx, track in enumerate(tracks):
-            recommended_tracks = ir_system.query(track, n=100)
+            recommended_tracks, _ = ir_system.query(track, n=100)
             similarities[ir_system_name][track.track_id] = [rec.track_id for rec in recommended_tracks]
             system_progress_bar.progress((idx + 1) / total_tracks)
         overall_progress_bar.progress((system_idx + 1) / total_systems)
@@ -161,12 +161,12 @@ else:
     query_track = None
 
 
-precision = calculate_metrics.PrecisionAtK(k=100)
-recall = calculate_metrics.RecallAtK(k=100)
-ndcg = calculate_metrics.NDCGAtK(k=100)
-mrr = calculate_metrics.MRR()
-popularity = calculate_metrics.Popularity()
-diversity = calculate_metrics.DiversityAtK(k=100)
+precision = PrecisionAtK(k=100)
+recall = RecallAtK(k=100)
+ndcg = NDCGAtK(k=100)
+mrr = MRR()
+popularity = Popularity()
+diversity = DiversityAtK(k=100)
 systems = ["Baseline", "Text-TF-IDF", "Text-BERT", "Audio-Spectral", "Audio-MusicNN", "Visual-ResNet", "Visual-VGG19", "LateFusion-Bert-MusicNN-ResNet"]
 
 def get_metrics(query_track, number_retrieved):
@@ -219,7 +219,7 @@ else:
     # metrics_grid[0][3].write("MRR: {:.2f}".format(evaluation["MRR"]))
 
     st.header("Top 10 most similar songs")
-    mygrid = make_grid(number_retrieved+1,6)
+    mygrid = make_grid(number_retrieved+1, 6)
     mygrid[0][0].write("Id")
     mygrid[0][1].write("Title")
     mygrid[0][2].write("Artist")

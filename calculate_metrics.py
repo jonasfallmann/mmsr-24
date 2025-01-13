@@ -33,7 +33,7 @@ def run_intrinsic_diversification_experiment(tasks):
         tasks.append((f"Audio-MusicNN-{diversification}", system))
 
 
-def run_diversification_rerate_experiment(tasks):
+def run_diversification_rerank_experiment(tasks):
     # rerate with different dissimilarity features
     for dissimilarity_feature in [FeatureType.TFIDF]:
         for diversification in [0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
