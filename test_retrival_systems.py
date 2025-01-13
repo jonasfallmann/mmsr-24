@@ -24,6 +24,7 @@ def test_retrieval_systems():
     # Audio systems
     audio_ir_spectral = AudioIRSystem(tracks, feature_type='spectral')
     audio_ir_musicnn = AudioIRSystem(tracks, feature_type='musicnn')
+    audio_ir_clap = AudioIRSystem(tracks, feature_type='clap')
     
     # Visual systems
     visual_ir_resnet = VisualIRSystem(tracks, feature_type='resnet')
@@ -68,6 +69,11 @@ def test_retrieval_systems():
     print("\n2. MusicNN Based Similar Tracks:")
     print("-" * 50)
     for (track, probability) in zip(*audio_ir_musicnn.query(query_track, n=n)):
+        print(f"[{probability:.2f}] {track}")
+            
+    print("\n3. CLAP Based Similar Tracks:")
+    print("-" * 50)
+    for (track, probability) in zip(*audio_ir_clap.query(query_track, n=n)):
         print(f"[{probability:.2f}] {track}")
     
     # Test visual-based systems
