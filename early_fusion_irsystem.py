@@ -134,6 +134,8 @@ class EarlyFusionIrSystem(IRSystem):
                 return [track.spectral_vector for track in tracks]
             case FeatureType.MUSICNN:
                 return [track.musicnn_vector for track in tracks]
+            case FeatureType.CLAP:
+                return [track.clap_vector for track in tracks]
             case FeatureType.RESNET:
                 return [track.resnet_vector for track in tracks]
             case FeatureType.VGG19:
