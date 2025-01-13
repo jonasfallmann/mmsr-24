@@ -29,7 +29,8 @@ def test_retrieval_systems():
     audio_ir_clap = AudioIRSystem(tracks, feature_type='clap')
 
     # diversification system
-    # diversification_ir = DiversityRerank(tracks, audio_ir_musicnn, diversification=0.5, dissimilarity_feature=FeatureType.BERT)
+    early_fusion_ir_musicnn = EarlyFusionIrSystem(tracks, featureSet1=FeatureType.BERT, featureSet2=FeatureType.MUSICNN, n_dims=100)
+    early_fusion_ir_clap = EarlyFusionIrSystem(tracks, featureSet1=FeatureType.BERT, featureSet2=FeatureType.CLAP, n_dims=100)
     
     # Test retrieval with a sample query
     print("\nTesting retrieval systems...")
@@ -55,11 +56,15 @@ def test_retrieval_systems():
     for (track, probability) in zip(*audio_ir_clap.query(query_track, n=n)):
         print(f"[{probability:.2f}] {track}")
 
-    # # Test diversification system
-    # print("\nDiversification Retrieval Results:")
-    # print("-" * 50)
-    # for (track, probability) in zip(*diversification_ir.query(query_track, n=n)):
-    #     print(f"[{probability:.2f}] {track}")
+    print("\Early fusion results MusicNN:")
+    print("-" * 50)
+    for (track, probability) in zip(*early_fusion_ir_musicnn.query(query_track, n=n)):
+        print(f"[{probability:.2f}] {track}")
+
+    print("\Early fusion results CLAP:")
+    print("-" * 50)
+    for (track, probability) in zip(*early_fusion_ir_clap.query(query_track, n=n)):
+        print(f"[{probability:.2f}] {track}")
 
 if __name__ == "__main__":
     test_retrieval_systems()
