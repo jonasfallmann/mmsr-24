@@ -11,7 +11,7 @@ from scipy.stats import rankdata
 class FeatureType(Enum):
     TFIDF = 'tfidf'
     BERT = 'bert'
-    CLAP_GENRES = 'clap_genres'
+    CLAP_TAGS = 'clap_tags'
     SPECTRAL = 'spectral'
     MUSICNN = 'musicnn'
     RESNET = 'resnet'
@@ -50,7 +50,7 @@ class Track:
         Text Features:
         tfidf_vector: TF-IDF representation of lyrics
         bert_vector: BERT embedding of lyrics
-        clap_genres_vector: Microsoft CLAP genre embedding
+        clap_tags_vector: Microsoft CLAP tags embedding
         
         Audio Features:
         spectral_vector: Spectral pattern features from BLF
@@ -75,7 +75,7 @@ class Track:
         url,
         tfidf_vector,
         bert_vector=None,
-        clap_genres_vector=None,
+        clap_tags_vector=None,
         spectral_vector=None,
         musicnn_vector=None,
         clap_vector=None,
@@ -96,7 +96,7 @@ class Track:
         # Text features
         self.tfidf_vector = tfidf_vector
         self.bert_vector = bert_vector
-        self.clap_genres_vector = clap_genres_vector
+        self.clap_tags_vector = clap_tags_vector
         
         # Audio features
         self.spectral_vector = spectral_vector
@@ -176,7 +176,7 @@ def preprocess(
     spotify_df: pd.DataFrame,
     lastfm_df: pd.DataFrame,
     bert_df: pd.DataFrame = None,
-    clap_genres_df: pd.DataFrame = None,
+    clap_tags_df: pd.DataFrame = None,
     spectral_df: pd.DataFrame = None,
     musicnn_df: pd.DataFrame = None,
     clap_df: pd.DataFrame = None,
@@ -193,7 +193,7 @@ def preprocess(
         genres_df: DataFrame with genre information
         tags_df: DataFrame with tag information
         bert_df: DataFrame with BERT embeddings
-        clap_genres_df: DataFrame with Microsoft CLAP genre embeddings
+        clap_tags_df: DataFrame with Microsoft CLAP tags embeddings
         spectral_df: DataFrame with spectral audio features
         musicnn_df: DataFrame with MusicNN features
         clap_df: DataFrame with Microsoft CLAP features
@@ -235,7 +235,7 @@ def preprocess(
         # Text features
         tfidf_vector = tfidf_df.loc[track_id].values if track_id in tfidf_df.index else None
         bert_vector = bert_df.loc[track_id].values if bert_df is not None and track_id in bert_df.index else None
-        clap_genres_vector = clap_genres_df.loc[track_id].values if clap_genres_df is not None and track_id in clap_genres_df.index else None
+        clap_tags_vector = clap_tags_df.loc[track_id].values if clap_tags_df is not None and track_id in clap_tags_df.index else None
         
         # Audio features
         spectral_vector = spectral_df.loc[track_id].values if spectral_df is not None and track_id in spectral_df.index else None
@@ -267,7 +267,7 @@ def preprocess(
             url=row["url"],
             tfidf_vector=tfidf_vector,
             bert_vector=bert_vector,
-            clap_genres_vector=clap_genres_vector,
+            clap_tags_vector=clap_tags_vector,
             spectral_vector=spectral_vector,
             musicnn_vector=musicnn_vector,
             clap_vector=clap_vector,

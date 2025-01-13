@@ -31,11 +31,11 @@ def test_retrieval_systems():
 
     # Text systems
     text_ir_bert = TextIRSystem(tracks, feature_type='bert')
-    text_ir_clap_genres = TextIRSystem(tracks, feature_type='clap_genres')
+    text_ir_clap_tags = TextIRSystem(tracks, feature_type='clap_tags')
 
     # diversification system
     early_fusion_ir_musicnn = EarlyFusionIrSystem(tracks, featureSet1=FeatureType.BERT, featureSet2=FeatureType.MUSICNN, n_dims=100)
-    early_fusion_ir_clap = EarlyFusionIrSystem(tracks, featureSet1=FeatureType.CLAP_GENRES, featureSet2=FeatureType.CLAP, n_dims=100)
+    early_fusion_ir_clap = EarlyFusionIrSystem(tracks, featureSet1=FeatureType.CLAP_TAGS, featureSet2=FeatureType.CLAP, n_dims=100)
     
     # Test retrieval with a sample query
     print("\nTesting retrieval systems...")
@@ -68,9 +68,9 @@ def test_retrieval_systems():
     for (track, probability) in zip(*text_ir_bert.query(query_track, n=n)):
         print(f"[{probability:.2f}] {track}")
     
-    print("\n2. CLAP Genres Based Similar Tracks:")
+    print("\n2. CLAP tags Based Similar Tracks:")
     print("-" * 50)
-    for (track, probability) in zip(*text_ir_clap_genres.query(query_track, n=n)):
+    for (track, probability) in zip(*text_ir_clap_tags.query(query_track, n=n)):
         print(f"[{probability:.2f}] {track}")
 
     print("\Early fusion results MusicNN + BERT:")
@@ -78,7 +78,7 @@ def test_retrieval_systems():
     for (track, probability) in zip(*early_fusion_ir_musicnn.query(query_track, n=n)):
         print(f"[{probability:.2f}] {track}")
 
-    print("\Early fusion results CLAP + CLAP genres:")
+    print("\Early fusion results CLAP + CLAP tags:")
     print("-" * 50)
     for (track, probability) in zip(*early_fusion_ir_clap.query(query_track, n=n)):
         print(f"[{probability:.2f}] {track}")

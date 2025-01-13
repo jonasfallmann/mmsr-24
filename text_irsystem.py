@@ -5,7 +5,7 @@ from baseline_script import Track, IRSystem, preprocess
 
 class TextIRSystem(IRSystem):
     """
-    Text Information Retrieval System using either TF-IDF, BERT, or Clap Genres features.
+    Text Information Retrieval System using either TF-IDF, BERT, or CLAP tag features.
     
     TF-IDF Features:
     - Traditional bag-of-words approach weighted by term importance
@@ -17,8 +17,8 @@ class TextIRSystem(IRSystem):
     - Captures semantic relationships and context
     - Dense representation that understands word meaning
     
-    Clap Genres Features:
-    - Genre-based features for music tracks
+    CLAP tag Features:
+    - Tag-based features for music tracks
     - Captures genre-specific characteristics and patterns
     - Useful for genre-based similarity comparisons
     
@@ -38,18 +38,18 @@ class TextIRSystem(IRSystem):
     
     def __init__(self, tracks, feature_type='tfidf'):
         """
-        Initialize Text IR System with either TF-IDF, BERT, or Clap Genres features
+        Initialize Text IR System with either TF-IDF, BERT, or CLAP tag features
         
         Args:
             tracks: List of Track objects
-            feature_type: 'tfidf', 'bert', or 'clap_genres'
+            feature_type: 'tfidf', 'bert', or 'clap_tags'
         """
         super().__init__(tracks)
         self.feature_type = feature_type.lower()
         
         # Validate feature type
-        if self.feature_type not in ['tfidf', 'bert', 'clap_genres']:
-            raise ValueError("feature_type must be either 'tfidf', 'bert', or 'clap_genres'")
+        if self.feature_type not in ['tfidf', 'bert', 'clap_tags']:
+            raise ValueError("feature_type must be either 'tfidf', 'bert', or 'clap_tags'")
         
         # Select the appropriate vector attribute
         if self.feature_type == 'tfidf':
@@ -57,7 +57,7 @@ class TextIRSystem(IRSystem):
         elif self.feature_type == 'bert':
             vector_attr = 'bert_vector'
         else:
-            vector_attr = 'clap_genres_vector'
+            vector_attr = 'clap_tags_vector'
         
         # Filter valid tracks and create matrix
         valid_tracks = [track for track in tracks if getattr(track, vector_attr) is not None]
@@ -73,7 +73,7 @@ class TextIRSystem(IRSystem):
         elif self.feature_type == 'bert':
             vector_attr = 'bert_vector'
         else:
-            vector_attr = 'clap_genres_vector'
+            vector_attr = 'clap_tags_vector'
         
         query_vector = getattr(query, vector_attr)
         
@@ -110,7 +110,7 @@ class TextIRSystem(IRSystem):
         elif self.feature_type == 'bert':
             vector_attr = 'bert_vector'
         else:
-            vector_attr = 'clap_genres_vector'
+            vector_attr = 'clap_tags_vector'
         
         query_vector = getattr(query, vector_attr)
 

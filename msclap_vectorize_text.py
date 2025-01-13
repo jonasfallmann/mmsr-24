@@ -27,7 +27,7 @@ genre_file_path = "dataset/id_genres_mmsr.tsv"
 genre_data = load_genre_data(genre_file_path)
 
 # Write the text embeddings into a TSV file
-output_file = "dataset/id_clap_genres_mmsr.tsv"
+output_file = "dataset/id_clap_tags_mmsr.tsv"
 with open(output_file, 'w', newline='') as tsvfile:
     writer = csv.writer(tsvfile, delimiter='\t')
     

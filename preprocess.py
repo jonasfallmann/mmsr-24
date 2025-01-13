@@ -16,7 +16,7 @@ def load_data_and_preprocess() -> list[Track]:
     # Text features
     tfidf_df = pd.read_csv("dataset/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
     bert_df = pd.read_csv("dataset/id_lyrics_bert_mmsr.tsv", sep='\t', index_col=0)
-    clap_genres_df = pd.read_csv("dataset/id_clap_genres_mmsr.tsv", sep='\t', index_col=0)
+    clap_tags_df = pd.read_csv("dataset/id_clap_tags_mmsr.tsv", sep='\t', index_col=0)
 
     # Audio features
     spectral_df = pd.read_csv("dataset/id_blf_spectral_mmsr.tsv", sep='\t', index_col=0)
@@ -38,7 +38,7 @@ def load_data_and_preprocess() -> list[Track]:
         spotify_df,
         lastfm_df,
         bert_df,
-        clap_genres_df,
+        clap_tags_df,
         spectral_df,
         musicnn_df,
         clap_df,
