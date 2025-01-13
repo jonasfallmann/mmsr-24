@@ -4,6 +4,7 @@ from msclap import CLAP
 from tqdm import tqdm
 
 N_CHUNKS = 5
+EMBED_LEN = 1024
 
 def chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
@@ -21,7 +22,7 @@ with open('dataset/id_clap_mmsr.tsv', 'w', newline='') as tsvfile:
     writer = csv.writer(tsvfile, delimiter='\t')
     
     # Write the header
-    header = ['id'] + [f'embedding_{i}' for i in range(768)]
+    header = ['id'] + [f'embedding_{i}' for i in range(EMBED_LEN)]
     writer.writerow(header)
     
     for file_chunk in tqdm(chunks(file_paths, N_CHUNKS), total=len(file_paths)//N_CHUNKS + 1, desc="Vectorizing"):
