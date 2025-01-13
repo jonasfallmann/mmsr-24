@@ -130,6 +130,8 @@ class EarlyFusionIrSystem(IRSystem):
                 return [track.tfidf_vector for track in tracks]
             case FeatureType.BERT:
                 return [track.bert_vector for track in tracks]
+            case FeatureType.CLAP_GENRES:
+                return [track.clap_genres_vector for track in tracks]
             case FeatureType.SPECTRAL:
                 return [track.spectral_vector for track in tracks]
             case FeatureType.MUSICNN:
