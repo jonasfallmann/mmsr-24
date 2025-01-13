@@ -7,6 +7,7 @@ from early_fusion_irsystem import EarlyFusionIrSystem
 from late_fusion_irsystem import LateFusionIRSystem
 from preprocess import load_data_and_preprocess
 from audio_irsystem import AudioIRSystem
+from text_irsystem import TextIRSystem
 from baseline_script import preprocess, Track, FeatureType
 
 
@@ -27,6 +28,10 @@ def test_retrieval_systems():
     audio_ir_spectral = AudioIRSystem(tracks, feature_type='spectral')
     audio_ir_musicnn = AudioIRSystem(tracks, feature_type='musicnn')
     audio_ir_clap = AudioIRSystem(tracks, feature_type='clap')
+
+    # Text systems
+    text_ir_bert = TextIRSystem(tracks, feature_type='bert')
+    text_ir_clap_genres = TextIRSystem(tracks, feature_type='clap_genres')
 
     # diversification system
     early_fusion_ir_musicnn = EarlyFusionIrSystem(tracks, featureSet1=FeatureType.BERT, featureSet2=FeatureType.MUSICNN, n_dims=100)
@@ -54,6 +59,18 @@ def test_retrieval_systems():
     print("\n3. CLAP Based Similar Tracks:")
     print("-" * 50)
     for (track, probability) in zip(*audio_ir_clap.query(query_track, n=n)):
+        print(f"[{probability:.2f}] {track}")
+
+    # Test text-based systems
+    print("\nText-based Retrieval Results:")
+    print("\n1. BERT Based Similar Tracks:")
+    print("-" * 50)
+    for (track, probability) in zip(*text_ir_bert.query(query_track, n=n)):
+        print(f"[{probability:.2f}] {track}")
+    
+    print("\n2. CLAP Genres Based Similar Tracks:")
+    print("-" * 50)
+    for (track, probability) in zip(*text_ir_clap_genres.query(query_track, n=n)):
         print(f"[{probability:.2f}] {track}")
 
     print("\Early fusion results MusicNN + BERT:")
