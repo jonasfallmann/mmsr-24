@@ -70,12 +70,12 @@ if __name__ == "__main__":
         "Early Fusion BERT+MusicNN 100")
     late_fusion_ir = LateFusionIRSystem(tracks, [text_ir_bert, audio_ir_musicnn, visual_ir_resnet],
                                         [0.3, 0.3, 0.4]).set_name('LateFusion-Bert-MusicNN-ResNet')
-    late_clap = LateFusionIRSystem(tracks, [text_ir_clap, audio_ir_clap],
+    late_fusion_clap_ir = LateFusionIRSystem(tracks, [text_ir_clap, audio_ir_clap],
                                         [0.7, 0.3]).set_name('LateFusion-CLAP')
     diversification_irsystem = DiversityRerank(tracks=tracks, ir_system=audio_ir_musicnn, diversification=0.5,
                                                dissimilarity_feature=FeatureType.TFIDF).set_name(
         "Audio-MusicNN-Diversification")
-    clap_irsystem = CombinedCLAPIRSystem(tracks).set_name("CLAP")
+    clap_irsystem = CombinedCLAPIRSystem(tracks).set_name("EarlyFusion-Avg-CLAP")
 
     # Initialize evaluation protocol
     evaluation_protocol = MetricsEvaluation(tracks)
@@ -95,8 +95,8 @@ if __name__ == "__main__":
         ("Visual-VGG19", visual_ir_vgg),
         ("Early Fusion BERT+MusicNN 100", early_fusion_irsystem),
         ("LateFusion-Bert-MusicNN-ResNet", late_fusion_ir),
-        ("Combined CLAP", clap_irsystem),
-        ("LateFusion-CLAP", late_clap),
+        ("EarlyFusion-Avg-CLAP", clap_irsystem),
+        ("LateFusion-CLAP", late_fusion_clap_ir),
     ]
 
     # run_diversification_rerate_experiment(tasks)
