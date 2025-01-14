@@ -75,13 +75,13 @@ def make_grid(cols,rows):
 
 @st.cache_data
 def load_datasets():
-    basic_info_df = pd.read_csv("dataset/id_information_mmsr.tsv", sep='\t')
-    youtube_urls_df = pd.read_csv("dataset/id_url_mmsr.tsv", sep='\t')
-    tfidf_df = pd.read_csv("dataset/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
-    genres_df = pd.read_csv("dataset/id_genres_mmsr.tsv", sep='\t')
-    tags_df = pd.read_csv("dataset/id_tags_dict.tsv", sep='\t')
-    spotify_df = pd.read_csv('dataset/id_metadata_mmsr.tsv', sep='\t')
-    lastfm_df = pd.read_csv('dataset/id_total_listens.tsv', sep='\t')
+    basic_info_df = pd.read_csv("deployment_data/id_information_mmsr.tsv", sep='\t')
+    youtube_urls_df = pd.read_csv("deployment_data/id_url_mmsr.tsv", sep='\t')
+    tfidf_df = pd.read_csv("deployment_data/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
+    genres_df = pd.read_csv("deployment_data/id_genres_mmsr.tsv", sep='\t')
+    tags_df = pd.read_csv("deployment_data/id_tags_dict.tsv", sep='\t')
+    spotify_df = pd.read_csv('deployment_data/id_metadata_mmsr.tsv', sep='\t')
+    lastfm_df = pd.read_csv('deployment_data/id_total_listens.tsv', sep='\t')
     return basic_info_df, youtube_urls_df, tfidf_df, genres_df, tags_df, spotify_df, lastfm_df
 
 basic_info_df, youtube_urls_df, tfidf_df, genres_df, tags_df, spotify_df, lastfm_df = load_datasets()
