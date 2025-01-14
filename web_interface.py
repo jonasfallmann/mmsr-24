@@ -98,7 +98,7 @@ def load_ir_systems(_tracks, _tracks_clap):
     baseline_ir = BaselineIRSystem(_tracks)
     text_ir_tfidf = TextIRSystem(_tracks, feature_type='tfidf')
     text_ir_bert = TextIRSystem(_tracks, feature_type='bert')
-    text_ir_clap = TextIRSystem(_tracks, feature_type='clap_text')
+    text_ir_clap = TextIRSystem(_tracks_clap, feature_type='clap_text')
     audio_ir_spectral = AudioIRSystem(_tracks, feature_type='spectral')
     audio_ir_musicnn = AudioIRSystem(_tracks, feature_type='musicnn')
     audio_ir_clap = AudioIRSystem(_tracks_clap, feature_type='clap_audio')
@@ -125,7 +125,7 @@ def precompute_similarities(ir_systems, tracks, tracks_clap):
     for system_idx, (ir_system_name, ir_system) in enumerate(ir_systems.items()):
         status_text.text(f"Precomputing similarities for {ir_system_name}, please wait...")
         similarities[ir_system_name] = {}
-        if ir_system_name == "Audio-CLAP" or ir_system_name == "LateFusion-CLAP" or ir_system_name == "EarlyFusion-Avg-CLAP":
+        if ir_system_name == "Text-CLAP" or ir_system_name == "Audio-CLAP" or ir_system_name == "LateFusion-CLAP" or ir_system_name == "EarlyFusion-Avg-CLAP":
             for idx, track in enumerate(tracks_clap):
                 recommended_tracks, _ = ir_system.query(track, n=100)
                 similarities[ir_system_name][track.track_id] = [rec.track_id for rec in recommended_tracks]
