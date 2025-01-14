@@ -1,8 +1,9 @@
-from baseline_script import BaselineIRSystem, preprocess
+from baseline_script import BaselineIRSystem, preprocess, FeatureType
 from text_irsystem import TextIRSystem
 from audio_irsystem import AudioIRSystem
 from visual_irsystem import VisualIRSystem
 from text_irsystem import TextIRSystem
+from early_fusion_irsystem import EarlyFusionIrSystem
 from late_fusion_irsystem import LateFusionIRSystem
 import streamlit as st
 import pandas as pd
@@ -93,9 +94,10 @@ def load_ir_systems(_tracks):
     audio_ir_musicnn = AudioIRSystem(_tracks, feature_type='musicnn')
     visual_ir_resnet = VisualIRSystem(_tracks, feature_type='resnet')
     visual_ir_vgg = VisualIRSystem(_tracks, feature_type='vgg19')
+    early_fusion_ir = EarlyFusionIrSystem(tracks, FeatureType.BERT, FeatureType.MUSICNN, n_dims=100).set_name("EarlyFusion-Bert-MusicNN")
     late_fusion_ir = LateFusionIRSystem(_tracks, [text_ir_bert, audio_ir_musicnn, visual_ir_resnet], [0.3, 0.3, 0.4]).set_name('LateFusion-Bert-MusicNN-ResNet')
-    return baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, visual_ir_resnet, visual_ir_vgg, late_fusion_ir
-baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, visual_ir_resnet, visual_ir_vgg, late_fusion_ir = load_ir_systems(tracks)
+    return baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir
+baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir = load_ir_systems(tracks)
 
 # Precompute and store similarities
 def precompute_similarities(ir_systems, tracks):
@@ -132,6 +134,7 @@ ir_systems = {
     "Audio-MusicNN": audio_ir_musicnn,
     "Visual-ResNet": visual_ir_resnet,
     "Visual-VGG19": visual_ir_vgg,
+    "EarlyFusion-Bert-MusicNN": early_fusion_ir,
     "LateFusion-Bert-MusicNN-ResNet": late_fusion_ir
 }
 
@@ -173,7 +176,7 @@ ndcg = NDCGAtK(k=100)
 mrr = MRR()
 popularity = Popularity()
 diversity = DiversityAtK(k=100)
-systems = ["Baseline", "Text-TF-IDF", "Text-BERT", "Text-CLAP", "Audio-Spectral", "Audio-MusicNN", "Visual-ResNet", "Visual-VGG19", "LateFusion-Bert-MusicNN-ResNet"]
+systems = ["Baseline", "Text-TF-IDF", "Text-BERT", "Text-CLAP", "Audio-Spectral", "Audio-MusicNN", "Visual-ResNet", "Visual-VGG19", "EarlyFusion-Bert-MusicNN", "LateFusion-Bert-MusicNN-ResNet"]
 
 def get_metrics(query_track, number_retrieved):
     grid_metrics = make_grid(len(systems), 7)
