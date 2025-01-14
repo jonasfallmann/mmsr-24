@@ -130,13 +130,13 @@ class EarlyFusionIrSystem(IRSystem):
                 return [track.tfidf_vector for track in tracks]
             case FeatureType.BERT:
                 return [track.bert_vector for track in tracks]
-            case FeatureType.CLAP_TAGS:
-                return [track.clap_tags_vector for track in tracks]
+            case FeatureType.CLAP_TEXT:
+                return [track.clap_text_vector for track in tracks]
             case FeatureType.SPECTRAL:
                 return [track.spectral_vector for track in tracks]
             case FeatureType.MUSICNN:
                 return [track.musicnn_vector for track in tracks]
-            case FeatureType.CLAP:
+            case FeatureType.CLAP_AUDIO:
                 return [track.clap_vector for track in tracks]
             case FeatureType.RESNET:
                 return [track.resnet_vector for track in tracks]

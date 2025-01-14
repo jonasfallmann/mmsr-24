@@ -24,7 +24,7 @@ def test_retrieval_systems():
     # Audio systems
     audio_ir_spectral = AudioIRSystem(tracks, feature_type='spectral')
     audio_ir_musicnn = AudioIRSystem(tracks, feature_type='musicnn')
-    audio_ir_clap = AudioIRSystem(tracks, feature_type='clap')
+    audio_ir_clap = AudioIRSystem(tracks, feature_type='clap_audio')
     
     # Visual systems
     visual_ir_resnet = VisualIRSystem(tracks, feature_type='resnet')

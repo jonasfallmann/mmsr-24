@@ -28,15 +28,15 @@ def test_retrieval_systems():
     # Audio systems
     audio_ir_spectral = AudioIRSystem(tracks, feature_type='spectral')
     audio_ir_musicnn = AudioIRSystem(tracks, feature_type='musicnn')
-    audio_ir_clap = AudioIRSystem(tracks, feature_type='clap')
+    audio_ir_clap = AudioIRSystem(tracks, feature_type='clap_audio')
 
     # Text systems
     text_ir_bert = TextIRSystem(tracks, feature_type='bert')
-    text_ir_clap_tags = TextIRSystem(tracks, feature_type='clap_tags')
+    text_ir_clap_text = TextIRSystem(tracks, feature_type='clap_text')
 
     # diversification system
     early_fusion_ir_musicnn = EarlyFusionIrSystem(tracks, featureSet1=FeatureType.BERT, featureSet2=FeatureType.MUSICNN, n_dims=100)
-    early_fusion_ir_clap = EarlyFusionIrSystem(tracks, featureSet1=FeatureType.CLAP_TAGS, featureSet2=FeatureType.CLAP, n_dims=100)
+    early_fusion_ir_clap = EarlyFusionIrSystem(tracks, featureSet1=FeatureType.CLAP_TEXT, featureSet2=FeatureType.MUSICNN, n_dims=100)
     combined_clap = CombinedCLAPIRSystem(tracks)
     
     # Test retrieval with a sample query
@@ -58,7 +58,7 @@ def test_retrieval_systems():
     for (track, probability) in zip(*audio_ir_musicnn.query(query_track, n=n)):
         print(f"[{probability:.2f}] {track}")
             
-    print("\n3. CLAP Based Similar Tracks:")
+    print("\n3. CLAP audio Based Similar Tracks:")
     print("-" * 50)
     for (track, probability) in zip(*audio_ir_clap.query(query_track, n=n)):
         print(f"[{probability:.2f}] {track}")
@@ -70,17 +70,17 @@ def test_retrieval_systems():
     for (track, probability) in zip(*text_ir_bert.query(query_track, n=n)):
         print(f"[{probability:.2f}] {track}")
     
-    print("\n2. CLAP tags Based Similar Tracks:")
+    print("\n2. CLAP text Based Similar Tracks:")
     print("-" * 50)
-    for (track, probability) in zip(*text_ir_clap_tags.query(query_track, n=n)):
+    for (track, probability) in zip(*text_ir_clap_text.query(query_track, n=n)):
         print(f"[{probability:.2f}] {track}")
 
-    print("\Early fusion results MusicNN + BERT:")
+    print("Early fusion results BERT + MusicNN titles:")
     print("-" * 50)
     for (track, probability) in zip(*early_fusion_ir_musicnn.query(query_track, n=n)):
         print(f"[{probability:.2f}] {track}")
 
-    print("\Early fusion results CLAP + CLAP tags:")
+    print("Early fusion results CLAP song titles + MusicNN tags:")
     print("-" * 50)
     for (track, probability) in zip(*early_fusion_ir_clap.query(query_track, n=n)):
         print(f"[{probability:.2f}] {track}")

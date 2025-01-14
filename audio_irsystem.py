@@ -36,17 +36,17 @@ class AudioIRSystem(IRSystem):
         
         Args:
             tracks: List of Track objects
-            feature_type: 'spectral', 'musicnn', or 'clap'
+            feature_type: 'spectral', 'musicnn', or 'clap_audio'
         """
         super().__init__(tracks)
         self.feature_type = feature_type.lower()
         
         # Validate feature type
-        if self.feature_type not in ['spectral', 'musicnn', 'clap']:
-            raise ValueError("feature_type must be either 'spectral', 'musicnn', or 'clap'")
+        if self.feature_type not in ['spectral', 'musicnn', 'clap_audio']:
+            raise ValueError("feature_type must be either 'spectral', 'musicnn', or 'clap_audio'")
         
         # Select the appropriate vector attribute
-        vector_attr = 'spectral_vector' if self.feature_type == 'spectral' else 'musicnn_vector' if self.feature_type == 'musicnn' else 'clap_vector'
+        vector_attr = 'spectral_vector' if self.feature_type == 'spectral' else 'musicnn_vector' if self.feature_type == 'musicnn' else 'clap_audio_vector'
         
         # Filter valid tracks and create matrix
         valid_tracks = [track for track in tracks if getattr(track, vector_attr) is not None]
@@ -72,7 +72,7 @@ class AudioIRSystem(IRSystem):
     def query(self, query: Track, n=10):
         """Find n most similar tracks based on chosen audio features"""
         # Get the appropriate vector based on feature type
-        vector_attr = 'spectral_vector' if self.feature_type == 'spectral' else 'musicnn_vector' if self.feature_type == 'musicnn' else 'clap_vector'
+        vector_attr = 'spectral_vector' if self.feature_type == 'spectral' else 'musicnn_vector' if self.feature_type == 'musicnn' else 'clap_audio_vector'
         query_vector = getattr(query, vector_attr)
         
         if query_vector is None:
@@ -133,7 +133,7 @@ class AudioIRSystem(IRSystem):
             list[float] | np.ndarray: List of cosine similarities
         """
         # Get the appropriate vector based on feature type
-        vector_attr = 'spectral_vector' if self.feature_type == 'spectral' else 'musicnn_vector' if self.feature_type == 'musicnn' else 'clap_vector'
+        vector_attr = 'spectral_vector' if self.feature_type == 'spectral' else 'musicnn_vector' if self.feature_type == 'musicnn' else 'clap_audio_vector'
         query_vector = getattr(query, vector_attr)
 
         if query_vector is None:
