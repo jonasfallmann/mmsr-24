@@ -2,6 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from audio_irsystem import AudioIRSystem
 from baseline_script import BaselineIRSystem, FeatureType
+from clap_irsystem import CombinedCLAPIRSystem
 from diversity_rerank import DiversityRerank
 from early_fusion_irsystem import EarlyFusionIrSystem
 from late_fusion_irsystem import LateFusionIRSystem
@@ -9,7 +10,7 @@ from metrics import MetricsEvaluation
 from preprocess import load_data_and_preprocess
 from text_irsystem import TextIRSystem
 from visual_irsystem import VisualIRSystem
-
+import pandas as pd
 
 def run_full_early_fusion_experiment(tasks):
     # add all combinations of early fusion systems with full dimensions and 100 dimensions
@@ -43,16 +44,25 @@ def run_diversification_rerank_experiment(tasks):
             tasks.append((f"Audio-MusicNN-Diversification-{diversification}-{dissimilarity_feature}", system))
 
 
-if __name__ == "__main__":
+def load_filtered_tracks():
     tracks = load_data_and_preprocess()
+    ids_df = pd.read_csv('dataset/id_clap_audio_mmsr.tsv', sep='\t')
+    valid_ids = set(ids_df['id'])
+    filtered_tracks = [track for track in tracks if track.track_id in valid_ids]
+    return filtered_tracks
+
+if __name__ == "__main__":
+    tracks = load_filtered_tracks()
 
     # Initialize all IR systems
     print("\nInitializing IR systems...")
     baseline_ir = BaselineIRSystem(tracks).set_name("Baseline")
     text_ir_tfidf = TextIRSystem(tracks, feature_type='tfidf').set_name("Text-TF-IDF")
     text_ir_bert = TextIRSystem(tracks, feature_type='bert').set_name("Text-BERT")
+    text_ir_clap = TextIRSystem(tracks, feature_type='clap_text').set_name("Text-CLIP")
     audio_ir_spectral = AudioIRSystem(tracks, feature_type='spectral').set_name("Audio-Spectral")
     audio_ir_musicnn = AudioIRSystem(tracks, feature_type='musicnn').set_name("Audio-MusicNN")
+    audio_ir_clap = AudioIRSystem(tracks, feature_type='clap_audio').set_name("Audio-CLAP")
     visual_ir_resnet = VisualIRSystem(tracks, feature_type='resnet').set_name("Visual-ResNet")
     visual_ir_vgg = VisualIRSystem(tracks, feature_type='vgg19').set_name("Visual-VGG19")
     # set to 100 dims as this is way faster to compute with marginal loss in performance
@@ -60,9 +70,12 @@ if __name__ == "__main__":
         "Early Fusion BERT+MusicNN 100")
     late_fusion_ir = LateFusionIRSystem(tracks, [text_ir_bert, audio_ir_musicnn, visual_ir_resnet],
                                         [0.3, 0.3, 0.4]).set_name('LateFusion-Bert-MusicNN-ResNet')
+    late_clap = LateFusionIRSystem(tracks, [text_ir_clap, audio_ir_clap],
+                                        [0.7, 0.3]).set_name('LateFusion-CLAP')
     diversification_irsystem = DiversityRerank(tracks=tracks, ir_system=audio_ir_musicnn, diversification=0.5,
                                                dissimilarity_feature=FeatureType.TFIDF).set_name(
         "Audio-MusicNN-Diversification")
+    clap_irsystem = CombinedCLAPIRSystem(tracks).set_name("CLAP")
 
     # Initialize evaluation protocol
     evaluation_protocol = MetricsEvaluation(tracks)
@@ -74,12 +87,16 @@ if __name__ == "__main__":
         ("Baseline", baseline_ir),
         ("Text-TF-IDF", text_ir_tfidf),
         ("Text-BERT", text_ir_bert),
+        ("Text-CLAP", text_ir_clap),
         ("Audio-Spectral", audio_ir_spectral),
         ("Audio-MusicNN", audio_ir_musicnn),
+        ("Audio-CLAP", audio_ir_clap),
         ("Visual-ResNet", visual_ir_resnet),
         ("Visual-VGG19", visual_ir_vgg),
         ("Early Fusion BERT+MusicNN 100", early_fusion_irsystem),
-        ("LateFusion-Bert-MusicNN-ResNet", late_fusion_ir)
+        ("LateFusion-Bert-MusicNN-ResNet", late_fusion_ir),
+        ("Combined CLAP", clap_irsystem),
+        ("LateFusion-CLAP", late_clap),
     ]
 
     # run_diversification_rerate_experiment(tasks)
