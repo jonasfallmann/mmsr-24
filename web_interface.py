@@ -167,7 +167,7 @@ recall = RecallAtK(k=number_retrieved)
 ndcg = NDCGAtK(k=number_retrieved)
 mrr = MRR()
 popularity = Popularity()
-diversity = DiversityAtK(k=number_retrieved)
+diversity = DiversityAtK(k=number_retrieved, max_tags=29, threshold=6)
 systems = ["Baseline", "Text-TF-IDF", "Text-BERT", "Text-CLAP", "Audio-Spectral", "Audio-MusicNN", "Visual-ResNet", "Visual-VGG19", "EarlyFusion-Bert-MusicNN", "LateFusion-Bert-MusicNN-ResNet"]
 
 def get_metrics(query_track, number_retrieved, query_relevant_tracks):
