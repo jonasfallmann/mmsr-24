@@ -1,0 +1,10 @@
+python=3.11
+pandas
+numpy
+tqdm
+streamlit
+scikit-learn
+ast
+scipy
+yt-dlp
+msclap
