@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 from ast import literal_eval
 from typing import Protocol
-from scipy.stats import rankdata
+import scipy as sp
 
 class FeatureType(Enum):
     TFIDF = 'tfidf'
@@ -217,9 +217,9 @@ def preprocess(
     
     def get_popularity_score(spotify_df, lastfm_df):
         df = pd.merge(spotify_df, lastfm_df, how="left", on="id")[["id", "popularity", "total_listens"]]
-        df['percentile_popularity'] = rankdata(df['popularity'], method='average') / len(df)
+        df['percentile_popularity'] = sp.stats.rankdata(df['popularity'], method='average') / len(df)
         df['log_clicks'] = np.log1p(df['total_listens'])
-        df['percentile_clicks'] = rankdata(df['log_clicks'], method='average') / len(df)
+        df['percentile_clicks'] = sp.stats.rankdata(df['log_clicks'], method='average') / len(df)
         df['combined_percentile_score'] = (df['percentile_popularity'] + df['percentile_clicks'])/2
         return df[['id', 'combined_percentile_score']]
     
