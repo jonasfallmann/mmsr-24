@@ -50,12 +50,12 @@ class Track:
         Text Features:
         tfidf_vector: TF-IDF representation of lyrics
         bert_vector: BERT embedding of lyrics
-        clap_text_vector: Microsoft CLAP text embedding
+        clap_text_vector: Microsoft CLAP text features
         
         Audio Features:
         spectral_vector: Spectral pattern features from BLF
         musicnn_vector: Deep learning features from MusicNN
-        clap_vector: Microsoft CLAP features
+        clap_audio_vector: Microsoft CLAP audio features
         
         Visual Features:
         resnet_vector: ResNet features from video frames
@@ -78,7 +78,7 @@ class Track:
         clap_text_vector=None,
         spectral_vector=None,
         musicnn_vector=None,
-        clap_vector=None,
+        clap_audio_vector=None,
         resnet_vector=None,
         vgg19_vector=None,
         genres=None,
@@ -101,7 +101,7 @@ class Track:
         # Audio features
         self.spectral_vector = spectral_vector
         self.musicnn_vector = musicnn_vector
-        self.clap_vector = clap_vector
+        self.clap_audio_vector = clap_audio_vector
         
         # Visual features
         self.resnet_vector = resnet_vector
@@ -240,7 +240,7 @@ def preprocess(
         # Audio features
         spectral_vector = spectral_df.loc[track_id].values if spectral_df is not None and track_id in spectral_df.index else None
         musicnn_vector = musicnn_df.loc[track_id].values if musicnn_df is not None and track_id in musicnn_df.index else None
-        clap_vector = clap_df.loc[track_id].values if clap_df is not None and track_id in clap_df.index else None
+        clap_audio_vector = clap_df.loc[track_id].values if clap_df is not None and track_id in clap_df.index else None
         
         # Visual features
         resnet_vector = resnet_df.loc[track_id].values if resnet_df is not None and track_id in resnet_df.index else None
@@ -270,7 +270,7 @@ def preprocess(
             clap_text_vector=clap_text_vector,
             spectral_vector=spectral_vector,
             musicnn_vector=musicnn_vector,
-            clap_vector=clap_vector,
+            clap_audio_vector=clap_audio_vector,
             resnet_vector=resnet_vector,
             vgg19_vector=vgg19_vector,
             genres=genres,

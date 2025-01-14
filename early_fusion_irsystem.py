@@ -137,7 +137,7 @@ class EarlyFusionIrSystem(IRSystem):
             case FeatureType.MUSICNN:
                 return [track.musicnn_vector for track in tracks]
             case FeatureType.CLAP_AUDIO:
-                return [track.clap_vector for track in tracks]
+                return [track.clap_audio_vector for track in tracks]
             case FeatureType.RESNET:
                 return [track.resnet_vector for track in tracks]
             case FeatureType.VGG19:

@@ -19,13 +19,13 @@ class CombinedCLAPIRSystem(IRSystem):
         # Ensure both CLAP text and audio embeddings exist
         valid_tracks = [
             track for track in tracks 
-            if track.clap_text_vector is not None and track.clap_vector is not None
+            if track.clap_text_vector is not None and track.clap_audio_vector is not None
         ]
         self.tracks = valid_tracks
         
         # Combine embeddings by averaging CLAP text and audio embeddings
         self.embedding_matrix = np.vstack([
-            self.combine_embeddings(track.clap_text_vector, track.clap_vector)
+            self.combine_embeddings(track.clap_text_vector, track.clap_audio_vector)
             for track in valid_tracks
         ])
     
@@ -55,11 +55,11 @@ class CombinedCLAPIRSystem(IRSystem):
             List of n most similar tracks and their similarity scores
         """
         # Ensure query has both CLAP text and audio embeddings
-        if query.clap_text_vector is None or query.clap_vector is None:
+        if query.clap_text_vector is None or query.clap_audio_vector is None:
             raise ValueError("Query track does not have both CLAP text and audio embeddings")
         
         # Combine query embeddings
-        query_vector = self.combine_embeddings(query.clap_text_vector, query.clap_vector)
+        query_vector = self.combine_embeddings(query.clap_text_vector, query.clap_audio_vector)
         query_vector = query_vector.reshape(1, -1)
         
         # Compute cosine similarity
@@ -86,11 +86,11 @@ class CombinedCLAPIRSystem(IRSystem):
         Returns:
             Array of cosine similarities
         """
-        if query.clap_text_vector is None or query.clap_vector is None:
+        if query.clap_text_vector is None or query.clap_audio_vector is None:
             raise ValueError("Query track does not have both CLAP text and audio embeddings")
         
         # Combine query embeddings
-        query_vector = self.combine_embeddings(query.clap_text_vector, query.clap_vector)
+        query_vector = self.combine_embeddings(query.clap_text_vector, query.clap_audio_vector)
         query_vector = query_vector.reshape(1, -1)
         
         # Compute cosine similarity
