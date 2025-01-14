@@ -90,6 +90,9 @@ basic_info_df, youtube_urls_df, tfidf_df, genres_df, tags_df, spotify_df, lastfm
 # Preprocess datasets to tracks objects
 # Load and preprocess data
 tracks = preprocess_tracks()
+ids_df = pd.read_csv('dataset/id_clap_audio_mmsr.tsv', sep='\t')
+valid_ids = set(ids_df['id'])
+tracks = [track for track in tracks if track.track_id in valid_ids]
 @st.cache_data
 def load_ir_systems(_tracks):
     baseline_ir = BaselineIRSystem(_tracks)
