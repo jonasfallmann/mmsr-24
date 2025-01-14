@@ -14,7 +14,7 @@ from baseline_script import preprocess, Track, FeatureType
 
 def load_filtered_tracks():
     tracks = load_data_and_preprocess()
-    ids_df = pd.read_csv('dataset/id_clap_mmsr.tsv', sep='\t')
+    ids_df = pd.read_csv('dataset/id_clap_audio_mmsr.tsv', sep='\t')
     valid_ids = set(ids_df['id'])
     filtered_tracks = [track for track in tracks if track.track_id in valid_ids]
     return filtered_tracks
