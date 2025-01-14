@@ -93,7 +93,7 @@ def load_ir_systems(_tracks):
     audio_ir_musicnn = AudioIRSystem(_tracks, feature_type='musicnn')
     visual_ir_resnet = VisualIRSystem(_tracks, feature_type='resnet')
     visual_ir_vgg = VisualIRSystem(_tracks, feature_type='vgg19')
-    late_fusion_ir = LateFusionIRSystem(_tracks, [text_ir_bert, text_ir_clap, audio_ir_musicnn, visual_ir_resnet], [0.3 , 0.3, 0.4]).set_name('LateFusion-Bert-MusicNN-ResNet')
+    late_fusion_ir = LateFusionIRSystem(_tracks, [text_ir_bert, audio_ir_musicnn, visual_ir_resnet], [0.3, 0.3, 0.4]).set_name('LateFusion-Bert-MusicNN-ResNet')
     return baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, visual_ir_resnet, visual_ir_vgg, late_fusion_ir
 baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, visual_ir_resnet, visual_ir_vgg, late_fusion_ir = load_ir_systems(tracks)
 
