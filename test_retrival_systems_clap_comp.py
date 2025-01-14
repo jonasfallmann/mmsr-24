@@ -6,6 +6,7 @@ from diversity_rerank import DiversityRerank
 from early_fusion_irsystem import EarlyFusionIrSystem
 from late_fusion_irsystem import LateFusionIRSystem
 from preprocess import load_data_and_preprocess
+from clap_irsystem import CombinedCLAPIRSystem
 from audio_irsystem import AudioIRSystem
 from text_irsystem import TextIRSystem
 from baseline_script import preprocess, Track, FeatureType
@@ -36,6 +37,7 @@ def test_retrieval_systems():
     # diversification system
     early_fusion_ir_musicnn = EarlyFusionIrSystem(tracks, featureSet1=FeatureType.BERT, featureSet2=FeatureType.MUSICNN, n_dims=100)
     early_fusion_ir_clap = EarlyFusionIrSystem(tracks, featureSet1=FeatureType.CLAP_TAGS, featureSet2=FeatureType.CLAP, n_dims=100)
+    combined_clap = CombinedCLAPIRSystem(tracks)
     
     # Test retrieval with a sample query
     print("\nTesting retrieval systems...")
@@ -81,6 +83,11 @@ def test_retrieval_systems():
     print("\Early fusion results CLAP + CLAP tags:")
     print("-" * 50)
     for (track, probability) in zip(*early_fusion_ir_clap.query(query_track, n=n)):
+        print(f"[{probability:.2f}] {track}")
+
+    print("\nCombined CLAP system:")
+    print("-" * 50)
+    for (track, probability) in zip(*combined_clap.query(query_track, n=n)):
         print(f"[{probability:.2f}] {track}")
 
 if __name__ == "__main__":
