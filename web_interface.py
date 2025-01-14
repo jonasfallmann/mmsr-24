@@ -173,7 +173,7 @@ ndcg = NDCGAtK(k=100)
 mrr = MRR()
 popularity = Popularity()
 diversity = DiversityAtK(k=100)
-systems = ["Baseline", "Text-TF-IDF", "Text-BERT", "Audio-Spectral", "Audio-MusicNN", "Visual-ResNet", "Visual-VGG19", "LateFusion-Bert-MusicNN-ResNet"]
+systems = ["Baseline", "Text-TF-IDF", "Text-BERT", "Text-CLAP", "Audio-Spectral", "Audio-MusicNN", "Visual-ResNet", "Visual-VGG19", "LateFusion-Bert-MusicNN-ResNet"]
 
 def get_metrics(query_track, number_retrieved):
     grid_metrics = make_grid(len(systems), 7)
