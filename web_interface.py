@@ -59,6 +59,11 @@ def preprocess_tracks():
 def load_precomputed_similarities():
     with open("precomputed_similarities.pkl", "rb") as f:
         return pickle.load(f)
+    
+@st.cache_data
+def load_precomputed_relevant_tracks():
+    with open("precomputed_relevant_songs.pkl", "rb") as f:
+        return pickle.load(f)
 
 # Util for displaying results with youtube video
 def make_grid(cols,rows):
@@ -120,7 +125,7 @@ def precompute_similarities(ir_systems, tracks):
     
     with open("precomputed_similarities.pkl", "wb") as f:
         pickle.dump(similarities, f)
-    
+        
     overall_progress_bar.empty()
     status_text.text("Precomputation complete.")
     status_text.empty()  # Remove status_text after done
@@ -170,15 +175,15 @@ else:
     query_track = None
 
 
-precision = PrecisionAtK(k=100)
-recall = RecallAtK(k=100)
-ndcg = NDCGAtK(k=100)
+precision = PrecisionAtK(k=number_retrieved)
+recall = RecallAtK(k=number_retrieved)
+ndcg = NDCGAtK(k=number_retrieved)
 mrr = MRR()
 popularity = Popularity()
-diversity = DiversityAtK(k=100)
+diversity = DiversityAtK(k=number_retrieved)
 systems = ["Baseline", "Text-TF-IDF", "Text-BERT", "Text-CLAP", "Audio-Spectral", "Audio-MusicNN", "Visual-ResNet", "Visual-VGG19", "EarlyFusion-Bert-MusicNN", "LateFusion-Bert-MusicNN-ResNet"]
 
-def get_metrics(query_track, number_retrieved):
+def get_metrics(query_track, number_retrieved, query_relevant_tracks):
     grid_metrics = make_grid(len(systems)+1, 7)
     grid_metrics[0][0].write("Metrics")
     grid_metrics[0][1].write("Precision")
@@ -190,13 +195,12 @@ def get_metrics(query_track, number_retrieved):
     for system in systems:
         metrics_recommended_track_ids = precomputed_similarities[system][query_track.track_id][:number_retrieved]
         metrics_recommended_tracks = [track for track in tracks if track.track_id in metrics_recommended_track_ids]
-        metric_relevant_ids = [track.track_id for track in metrics_recommended_tracks if (any(top_genre in track.top_genres for top_genre in query_track.top_genres))]
-        p = round(precision.evaluate(metrics_recommended_track_ids, metric_relevant_ids),4)
-        r = round(recall.evaluate(metrics_recommended_track_ids, metric_relevant_ids),4)
-        n = round(ndcg.evaluate(metrics_recommended_track_ids, metric_relevant_ids),4)
-        m = round(mrr.evaluate(metrics_recommended_track_ids, metric_relevant_ids),4)
-        pop = round(popularity.evaluate(metrics_recommended_tracks, metric_relevant_ids),4)
-        d = round(diversity.evaluate(metrics_recommended_tracks, metric_relevant_ids),4)
+        p = round(precision.evaluate(metrics_recommended_track_ids, query_relevant_tracks),4)
+        r = round(recall.evaluate(metrics_recommended_track_ids, query_relevant_tracks),4)
+        n = round(ndcg.evaluate(metrics_recommended_track_ids, query_relevant_tracks),4)
+        m = round(mrr.evaluate(metrics_recommended_track_ids, query_relevant_tracks),4)
+        pop = round(popularity.evaluate(metrics_recommended_tracks, query_relevant_tracks),4)
+        d = round(diversity.evaluate(metrics_recommended_tracks, query_relevant_tracks),4)
         metrics = {"Precision":p, "Recall":r, "nDCG":n, "MRR":m, "Popularity":pop, "Diversity":d}
         grid_metrics[systems.index(system)][0].write(system)
         for m in range(len(metrics)):
@@ -204,13 +208,15 @@ def get_metrics(query_track, number_retrieved):
     return grid_metrics
 
 if query_track is not None:
+    relevant_tracks = load_precomputed_relevant_tracks()
+    relevant_tracks_query = relevant_tracks[query_track.track_id]
     top_genres_string = ", ".join(query_track.top_genres)   
     if len(query_track.top_genres)>1:
         st.text(f"The top genres of your query track are: {top_genres_string}")
     else:
         st.text(f"The top genre of your query track is: {top_genres_string}")
     with st.expander("Metrics for your chosen song at N across IR Systems"):
-        get_metrics(query_track, number_retrieved)
+        get_metrics(query_track, number_retrieved, relevant_tracks_query)
     
         
 
