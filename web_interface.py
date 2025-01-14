@@ -108,7 +108,7 @@ def load_ir_systems(_tracks, _tracks_clap):
     late_fusion_ir = LateFusionIRSystem(_tracks, [text_ir_bert, audio_ir_musicnn, visual_ir_resnet], [0.3, 0.3, 0.4]).set_name('LateFusion-Bert-MusicNN-ResNet')
     late_fusion_clap_ir = LateFusionIRSystem(_tracks_clap, [text_ir_clap, audio_ir_clap],
                                         [0.7, 0.3]).set_name('LateFusion-CLAP')
-    early_fusion_clap_ir = CombinedCLAPIRSystem(tracks).set_name("EarlyFusion-Avg-CLAP")
+    early_fusion_clap_ir = CombinedCLAPIRSystem(_tracks_clap).set_name("EarlyFusion-Avg-CLAP")
     return baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, audio_ir_clap, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir, late_fusion_clap_ir, early_fusion_clap_ir
 
 baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, audio_ir_clap, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir, late_fusion_clap_ir, early_fusion_clap_ir = load_ir_systems(tracks, tracks_clap)
@@ -125,7 +125,7 @@ def precompute_similarities(ir_systems, tracks, tracks_clap):
     for system_idx, (ir_system_name, ir_system) in enumerate(ir_systems.items()):
         status_text.text(f"Precomputing similarities for {ir_system_name}, please wait...")
         similarities[ir_system_name] = {}
-        if ir_system_name == "Audio-CLAP" or ir_system_name == "LateFusion-CLAP":
+        if ir_system_name == "Audio-CLAP" or ir_system_name == "LateFusion-CLAP" or ir_system_name == "EarlyFusion-Avg-CLAP":
             for idx, track in enumerate(tracks_clap):
                 recommended_tracks, _ = ir_system.query(track, n=100)
                 similarities[ir_system_name][track.track_id] = [rec.track_id for rec in recommended_tracks]
