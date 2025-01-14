@@ -1,4 +1,5 @@
 from baseline_script import BaselineIRSystem, preprocess, FeatureType
+from clap_irsystem import CombinedCLAPIRSystem
 from text_irsystem import TextIRSystem
 from audio_irsystem import AudioIRSystem
 from visual_irsystem import VisualIRSystem
@@ -97,12 +98,17 @@ def load_ir_systems(_tracks):
     text_ir_clap = TextIRSystem(_tracks, feature_type='clap_text')
     audio_ir_spectral = AudioIRSystem(_tracks, feature_type='spectral')
     audio_ir_musicnn = AudioIRSystem(_tracks, feature_type='musicnn')
+    audio_ir_clap = AudioIRSystem(_tracks, feature_type='clap_audio')
     visual_ir_resnet = VisualIRSystem(_tracks, feature_type='resnet')
     visual_ir_vgg = VisualIRSystem(_tracks, feature_type='vgg19')
     early_fusion_ir = EarlyFusionIrSystem(tracks, FeatureType.BERT, FeatureType.MUSICNN, n_dims=100).set_name("EarlyFusion-Bert-MusicNN")
     late_fusion_ir = LateFusionIRSystem(_tracks, [text_ir_bert, audio_ir_musicnn, visual_ir_resnet], [0.3, 0.3, 0.4]).set_name('LateFusion-Bert-MusicNN-ResNet')
-    return baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir
-baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir = load_ir_systems(tracks)
+    late_fusion_clap_ir = LateFusionIRSystem(tracks, [text_ir_clap, audio_ir_clap],
+                                        [0.7, 0.3]).set_name('LateFusion-CLAP')
+    early_fusion_clap_ir = CombinedCLAPIRSystem(tracks).set_name("EarlyFusion-Avg-CLAP")
+    return baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, audio_ir_clap, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir, late_fusion_clap_ir, early_fusion_clap_ir
+
+baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, audio_ir_clap, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir, late_fusion_clap_ir, early_fusion_clap_ir = load_ir_systems(tracks)
 
 # Precompute and store similarities
 def precompute_similarities(ir_systems, tracks):
@@ -137,10 +143,13 @@ ir_systems = {
     "Text-CLAP": text_ir_clap,
     "Audio-Spectral": audio_ir_spectral,
     "Audio-MusicNN": audio_ir_musicnn,
+    "Audio-CLAP": audio_ir_clap,
     "Visual-ResNet": visual_ir_resnet,
     "Visual-VGG19": visual_ir_vgg,
     "EarlyFusion-Bert-MusicNN": early_fusion_ir,
-    "LateFusion-Bert-MusicNN-ResNet": late_fusion_ir
+    "EarlyFusion-Avg-CLAP": early_fusion_clap_ir,
+    "LateFusion-Bert-MusicNN-ResNet": late_fusion_ir,
+    "LateFusion-CLAP": late_fusion_clap_ir
 }
 
 if not os.path.exists("precomputed_similarities.pkl"):

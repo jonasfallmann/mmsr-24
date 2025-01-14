@@ -66,7 +66,7 @@ if __name__ == "__main__":
     visual_ir_resnet = VisualIRSystem(tracks, feature_type='resnet').set_name("Visual-ResNet")
     visual_ir_vgg = VisualIRSystem(tracks, feature_type='vgg19').set_name("Visual-VGG19")
     # set to 100 dims as this is way faster to compute with marginal loss in performance
-    early_fusion_irsystem = EarlyFusionIrSystem(tracks, FeatureType.BERT, FeatureType.MUSICNN, n_dims=100).set_name(
+    early_fusion_ir = EarlyFusionIrSystem(tracks, FeatureType.BERT, FeatureType.MUSICNN, n_dims=100).set_name(
         "Early Fusion BERT+MusicNN 100")
     late_fusion_ir = LateFusionIRSystem(tracks, [text_ir_bert, audio_ir_musicnn, visual_ir_resnet],
                                         [0.3, 0.3, 0.4]).set_name('LateFusion-Bert-MusicNN-ResNet')
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     diversification_irsystem = DiversityRerank(tracks=tracks, ir_system=audio_ir_musicnn, diversification=0.5,
                                                dissimilarity_feature=FeatureType.TFIDF).set_name(
         "Audio-MusicNN-Diversification")
-    clap_irsystem = CombinedCLAPIRSystem(tracks).set_name("EarlyFusion-Avg-CLAP")
+    early_fusion_clap_ir = CombinedCLAPIRSystem(tracks).set_name("EarlyFusion-Avg-CLAP")
 
     # Initialize evaluation protocol
     evaluation_protocol = MetricsEvaluation(tracks)
@@ -93,9 +93,9 @@ if __name__ == "__main__":
         ("Audio-CLAP", audio_ir_clap),
         ("Visual-ResNet", visual_ir_resnet),
         ("Visual-VGG19", visual_ir_vgg),
-        ("Early Fusion BERT+MusicNN 100", early_fusion_irsystem),
+        ("Early Fusion BERT+MusicNN 100", early_fusion_ir),
         ("LateFusion-Bert-MusicNN-ResNet", late_fusion_ir),
-        ("EarlyFusion-Avg-CLAP", clap_irsystem),
+        ("EarlyFusion-Avg-CLAP", early_fusion_clap_ir),
         ("LateFusion-CLAP", late_fusion_clap_ir),
     ]
 
