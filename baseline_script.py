@@ -179,7 +179,7 @@ def preprocess(
     clap_text_df: pd.DataFrame = None,
     spectral_df: pd.DataFrame = None,
     musicnn_df: pd.DataFrame = None,
-    clap_df: pd.DataFrame = None,
+    clap_audio_df: pd.DataFrame = None,
     resnet_df: pd.DataFrame = None,
     vgg19_df: pd.DataFrame = None
 ):
@@ -193,10 +193,10 @@ def preprocess(
         genres_df: DataFrame with genre information
         tags_df: DataFrame with tag information
         bert_df: DataFrame with BERT embeddings
-        clap_text_df: DataFrame with Microsoft CLAP text embeddings
+        clap_text_df: DataFrame with Microsoft CLAP text features
         spectral_df: DataFrame with spectral audio features
         musicnn_df: DataFrame with MusicNN features
-        clap_df: DataFrame with Microsoft CLAP features
+        clap_audio_df: DataFrame with Microsoft CLAP audio features
         resnet_df: DataFrame with ResNet features
         vgg19_df: DataFrame with VGG19 features
     
@@ -240,7 +240,7 @@ def preprocess(
         # Audio features
         spectral_vector = spectral_df.loc[track_id].values if spectral_df is not None and track_id in spectral_df.index else None
         musicnn_vector = musicnn_df.loc[track_id].values if musicnn_df is not None and track_id in musicnn_df.index else None
-        clap_audio_vector = clap_df.loc[track_id].values if clap_df is not None and track_id in clap_df.index else None
+        clap_audio_vector = clap_audio_df.loc[track_id].values if clap_audio_df is not None and track_id in clap_audio_df.index else None
         
         # Visual features
         resnet_vector = resnet_df.loc[track_id].values if resnet_df is not None and track_id in resnet_df.index else None

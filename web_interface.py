@@ -30,11 +30,13 @@ def load_data():
     vgg19_df = pd.read_csv("dataset/id_vgg19_mmsr.tsv", sep='\t', index_col=0)
     spotify_df = pd.read_csv('dataset/id_metadata_mmsr.tsv', sep='\t')
     lastfm_df = pd.read_csv('dataset/id_total_listens.tsv', sep='\t')
-    return basic_info_df, youtube_urls_df, genres_df, tags_df, tfidf_df, bert_df, spectral_df, musicnn_df, resnet_df, vgg19_df, spotify_df, lastfm_df
+    clap_text_df = pd.read_csv('dataset/id_clap_songtitles_mmsr.tsv', sep='\t', index_col=0)
+    clap_audio_df = pd.read_csv('dataset/id_clap_audio_mmsr.tsv', sep='\t', index_col=0)
+    return basic_info_df, youtube_urls_df, genres_df, tags_df, tfidf_df, bert_df, spectral_df, musicnn_df, resnet_df, vgg19_df, spotify_df, lastfm_df, clap_text_df, clap_audio_df
 
 @st.cache_data
 def preprocess_tracks():
-    basic_info_df, youtube_urls_df, genres_df, tags_df, tfidf_df, bert_df, spectral_df, musicnn_df, resnet_df, vgg19_df, spotify_df, lastfm_df = load_data()
+    basic_info_df, youtube_urls_df, genres_df, tags_df, tfidf_df, bert_df, spectral_df, musicnn_df, resnet_df, vgg19_df, spotify_df, lastfm_df, clap_text_df, clap_audio_df = load_data()
     return preprocess(
         basic_info_df, 
         youtube_urls_df,
@@ -44,8 +46,10 @@ def preprocess_tracks():
         spotify_df,
         lastfm_df,
         bert_df,
+        clap_text_df,
         spectral_df,
         musicnn_df,
+        clap_audio_df,
         resnet_df,
         vgg19_df
     )
@@ -84,13 +88,14 @@ def load_ir_systems(_tracks):
     baseline_ir = BaselineIRSystem(_tracks)
     text_ir_tfidf = TextIRSystem(_tracks, feature_type='tfidf')
     text_ir_bert = TextIRSystem(_tracks, feature_type='bert')
+    text_ir_clap = TextIRSystem(_tracks, feature_type='clap_text')
     audio_ir_spectral = AudioIRSystem(_tracks, feature_type='spectral')
     audio_ir_musicnn = AudioIRSystem(_tracks, feature_type='musicnn')
     visual_ir_resnet = VisualIRSystem(_tracks, feature_type='resnet')
     visual_ir_vgg = VisualIRSystem(_tracks, feature_type='vgg19')
-    late_fusion_ir = LateFusionIRSystem(_tracks, [text_ir_bert, audio_ir_musicnn, visual_ir_resnet], [0.3 , 0.3, 0.4]).set_name('LateFusion-Bert-MusicNN-ResNet')
-    return baseline_ir, text_ir_tfidf, text_ir_bert, audio_ir_spectral, audio_ir_musicnn, visual_ir_resnet, visual_ir_vgg, late_fusion_ir
-baseline_ir, text_ir_tfidf, text_ir_bert, audio_ir_spectral, audio_ir_musicnn, visual_ir_resnet, visual_ir_vgg, late_fusion_ir = load_ir_systems(tracks)
+    late_fusion_ir = LateFusionIRSystem(_tracks, [text_ir_bert, text_ir_clap, audio_ir_musicnn, visual_ir_resnet], [0.3 , 0.3, 0.4]).set_name('LateFusion-Bert-MusicNN-ResNet')
+    return baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, visual_ir_resnet, visual_ir_vgg, late_fusion_ir
+baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, visual_ir_resnet, visual_ir_vgg, late_fusion_ir = load_ir_systems(tracks)
 
 # Precompute and store similarities
 def precompute_similarities(ir_systems, tracks):
@@ -122,6 +127,7 @@ ir_systems = {
     "Baseline": baseline_ir,
     "Text-TF-IDF": text_ir_tfidf,
     "Text-BERT": text_ir_bert,
+    "Text-CLAP": text_ir_clap,
     "Audio-Spectral": audio_ir_spectral,
     "Audio-MusicNN": audio_ir_musicnn,
     "Visual-ResNet": visual_ir_resnet,
