@@ -197,8 +197,14 @@ def get_metrics(query_track, number_retrieved):
     return grid_metrics
 
 if query_track is not None:
+    top_genres_string = ", ".join(query_track.top_genres)   
+    if len(query_track.top_genres)>1:
+        st.text(f"The top genres of your query track are: {top_genres_string}")
+    else:
+        st.text(f"The top genre of your query track is: {top_genres_string}")
     with st.expander("Metrics for your chosen song at N across IR Systems"):
         get_metrics(query_track, number_retrieved)
+    
         
 
 ir_system = st.radio(
@@ -227,7 +233,7 @@ else:
     # metrics_grid[0][2].write("NDCG@10: {:.2f}".format(evaluation["NDCG@10"]))
     # metrics_grid[0][3].write("MRR: {:.2f}".format(evaluation["MRR"]))
 
-    st.header("Top 10 most similar songs")
+    st.header(f"Top {number_retrieved} most similar songs")
     mygrid = make_grid(number_retrieved+1, 6)
     mygrid[0][0].write("Id")
     mygrid[0][1].write("Title")
