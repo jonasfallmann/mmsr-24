@@ -1,9 +1,8 @@
+streamlit
 pandas
 numpy
 tqdm
-streamlit
 scikit-learn
-ast
 scipy
 yt-dlp
 msclap
