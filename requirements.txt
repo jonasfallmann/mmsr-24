@@ -8,3 +8,4 @@ ast
 scipy
 yt-dlp
 msclap
+scipy
