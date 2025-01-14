@@ -92,29 +92,29 @@ basic_info_df, youtube_urls_df, tfidf_df, genres_df, tags_df, spotify_df, lastfm
 tracks = preprocess_tracks()
 ids_df = pd.read_csv('dataset/id_clap_audio_mmsr.tsv', sep='\t')
 valid_ids = set(ids_df['id'])
-tracks = [track for track in tracks if track.track_id in valid_ids]
+tracks_clap = [track for track in tracks if track.track_id in valid_ids]
 @st.cache_data
-def load_ir_systems(_tracks):
+def load_ir_systems(_tracks, _tracks_clap):
     baseline_ir = BaselineIRSystem(_tracks)
     text_ir_tfidf = TextIRSystem(_tracks, feature_type='tfidf')
     text_ir_bert = TextIRSystem(_tracks, feature_type='bert')
     text_ir_clap = TextIRSystem(_tracks, feature_type='clap_text')
     audio_ir_spectral = AudioIRSystem(_tracks, feature_type='spectral')
     audio_ir_musicnn = AudioIRSystem(_tracks, feature_type='musicnn')
-    audio_ir_clap = AudioIRSystem(_tracks, feature_type='clap_audio')
+    audio_ir_clap = AudioIRSystem(_tracks_clap, feature_type='clap_audio')
     visual_ir_resnet = VisualIRSystem(_tracks, feature_type='resnet')
     visual_ir_vgg = VisualIRSystem(_tracks, feature_type='vgg19')
     early_fusion_ir = EarlyFusionIrSystem(tracks, FeatureType.BERT, FeatureType.MUSICNN, n_dims=100).set_name("EarlyFusion-Bert-MusicNN")
     late_fusion_ir = LateFusionIRSystem(_tracks, [text_ir_bert, audio_ir_musicnn, visual_ir_resnet], [0.3, 0.3, 0.4]).set_name('LateFusion-Bert-MusicNN-ResNet')
-    late_fusion_clap_ir = LateFusionIRSystem(tracks, [text_ir_clap, audio_ir_clap],
+    late_fusion_clap_ir = LateFusionIRSystem(_tracks_clap, [text_ir_clap, audio_ir_clap],
                                         [0.7, 0.3]).set_name('LateFusion-CLAP')
     early_fusion_clap_ir = CombinedCLAPIRSystem(tracks).set_name("EarlyFusion-Avg-CLAP")
     return baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, audio_ir_clap, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir, late_fusion_clap_ir, early_fusion_clap_ir
 
-baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, audio_ir_clap, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir, late_fusion_clap_ir, early_fusion_clap_ir = load_ir_systems(tracks)
+baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, audio_ir_clap, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir, late_fusion_clap_ir, early_fusion_clap_ir = load_ir_systems(tracks, tracks_clap)
 
 # Precompute and store similarities
-def precompute_similarities(ir_systems, tracks):
+def precompute_similarities(ir_systems, tracks, tracks_clap):
     similarities = {}
     total_systems = len(ir_systems)
     overall_progress_bar = st.progress(0)
@@ -125,10 +125,16 @@ def precompute_similarities(ir_systems, tracks):
     for system_idx, (ir_system_name, ir_system) in enumerate(ir_systems.items()):
         status_text.text(f"Precomputing similarities for {ir_system_name}, please wait...")
         similarities[ir_system_name] = {}
-        for idx, track in enumerate(tracks):
-            recommended_tracks, _ = ir_system.query(track, n=100)
-            similarities[ir_system_name][track.track_id] = [rec.track_id for rec in recommended_tracks]
-            system_progress_bar.progress((idx + 1) / total_tracks)
+        if ir_system_name == "Audio-CLAP" or ir_system_name == "LateFusion-CLAP":
+            for idx, track in enumerate(tracks_clap):
+                recommended_tracks, _ = ir_system.query(track, n=100)
+                similarities[ir_system_name][track.track_id] = [rec.track_id for rec in recommended_tracks]
+                system_progress_bar.progress((idx + 1) / total_tracks)
+        else:
+            for idx, track in enumerate(tracks):
+                recommended_tracks, _ = ir_system.query(track, n=100)
+                similarities[ir_system_name][track.track_id] = [rec.track_id for rec in recommended_tracks]
+                system_progress_bar.progress((idx + 1) / total_tracks)
         overall_progress_bar.progress((system_idx + 1) / total_systems)
         system_progress_bar.empty()  # Reset system progress bar for next system
     
@@ -156,7 +162,7 @@ ir_systems = {
 }
 
 if not os.path.exists("precomputed_similarities.pkl"):
-    precompute_similarities(ir_systems, tracks)
+    precompute_similarities(ir_systems, tracks, tracks_clap)
 
 # Load precomputed similarities
 precomputed_similarities = load_precomputed_similarities()
