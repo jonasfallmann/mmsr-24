@@ -179,7 +179,14 @@ diversity = DiversityAtK(k=100)
 systems = ["Baseline", "Text-TF-IDF", "Text-BERT", "Text-CLAP", "Audio-Spectral", "Audio-MusicNN", "Visual-ResNet", "Visual-VGG19", "EarlyFusion-Bert-MusicNN", "LateFusion-Bert-MusicNN-ResNet"]
 
 def get_metrics(query_track, number_retrieved):
-    grid_metrics = make_grid(len(systems), 7)
+    grid_metrics = make_grid(len(systems)+1, 7)
+    grid_metrics[0][0].write("Metrics")
+    grid_metrics[0][1].write("Precision")
+    grid_metrics[0][2].write("Recall")
+    grid_metrics[0][3].write("nDCG")
+    grid_metrics[0][4].write("MRR")
+    grid_metrics[0][5].write("Popularity")
+    grid_metrics[0][6].write("Diversity")
     for system in systems:
         metrics_recommended_track_ids = precomputed_similarities[system][query_track.track_id][:number_retrieved]
         metrics_recommended_tracks = [track for track in tracks if track.track_id in metrics_recommended_track_ids]
@@ -193,7 +200,7 @@ def get_metrics(query_track, number_retrieved):
         metrics = {"Precision":p, "Recall":r, "nDCG":n, "MRR":m, "Popularity":pop, "Diversity":d}
         grid_metrics[systems.index(system)][0].write(system)
         for m in range(len(metrics)):
-            grid_metrics[systems.index(system)][m+1].write(f"{list(metrics)[m]}: {list(metrics.values())[m]}")
+            grid_metrics[systems.index(system)][m+1].write(f"{list(metrics.values())[m]}")
     return grid_metrics
 
 if query_track is not None:
