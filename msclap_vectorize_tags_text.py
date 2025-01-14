@@ -25,8 +25,11 @@ def load_tags_data(tags_file, exclude_genres):
         for row in reader:
             song_id = row[0]
             tags_dict = eval(row[1])  # Convert string representation of dict back to dict
-            # Exclude tags that match genres
-            filtered_tags = [tag for tag in tags_dict.keys() if tag not in exclude_genres]
+            # Exclude tags that contain any genre as a substring
+            filtered_tags = [
+                tag for tag in tags_dict.keys() 
+                if not any(genre in tag for genre in exclude_genres)
+            ]
             tags_data[song_id] = " ".join(filtered_tags)  # Concatenate tags into a single string
     return tags_data
 
