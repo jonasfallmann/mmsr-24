@@ -88,7 +88,7 @@ def load_ir_systems(_tracks):
     early_fusion_ir = EarlyFusionIrSystem(tracks, FeatureType.BERT, FeatureType.MUSICNN, n_dims=100).set_name("EarlyFusion-Bert-MusicNN")
     late_fusion_ir = LateFusionIRSystem(_tracks, [text_ir_bert, audio_ir_musicnn, visual_ir_resnet], [0.3, 0.3, 0.4]).set_name('LateFusion-Bert-MusicNN-ResNet')
     return baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir
-baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir = load_ir_systems(tracks)
+
 
 # Precompute and store similarities
 def precompute_similarities(ir_systems, tracks):
@@ -116,7 +116,11 @@ def precompute_similarities(ir_systems, tracks):
     status_text.text("Precomputation complete.")
     status_text.empty()  # Remove status_text after done
 
-ir_systems = {
+
+
+if not os.path.exists("precomputed_similarities.pkl"):
+    baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir = load_ir_systems(tracks)
+    ir_systems = {
     "Baseline": baseline_ir,
     "Text-TF-IDF": text_ir_tfidf,
     "Text-BERT": text_ir_bert,
@@ -126,10 +130,7 @@ ir_systems = {
     "Visual-ResNet": visual_ir_resnet,
     "Visual-VGG19": visual_ir_vgg,
     "EarlyFusion-Bert-MusicNN": early_fusion_ir,
-    "LateFusion-Bert-MusicNN-ResNet": late_fusion_ir
-}
-
-if not os.path.exists("precomputed_similarities.pkl"):
+    "LateFusion-Bert-MusicNN-ResNet": late_fusion_ir}
     precompute_similarities(ir_systems, tracks)
 
 # Load precomputed similarities
