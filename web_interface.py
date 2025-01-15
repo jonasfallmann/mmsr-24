@@ -96,7 +96,7 @@ def load_ir_systems(_tracks, _tracks_clap):
     early_fusion_clap_ir = CombinedCLAPIRSystem(_tracks_clap).set_name("EarlyFusion-Avg-CLAP")
     return baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, audio_ir_clap, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir, late_fusion_clap_ir, early_fusion_clap_ir
 
-baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, audio_ir_clap, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir, late_fusion_clap_ir, early_fusion_clap_ir = load_ir_systems(tracks, tracks_clap)
+
 
 # Precompute and store similarities
 def precompute_similarities(ir_systems, tracks, tracks_clap):
@@ -133,7 +133,7 @@ def precompute_similarities(ir_systems, tracks, tracks_clap):
 
 
 if not os.path.exists("precomputed_similarities.pkl"):
-    baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir = load_ir_systems(tracks)
+    baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, audio_ir_clap, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir, late_fusion_clap_ir, early_fusion_clap_ir = load_ir_systems(tracks, tracks_clap)
     ir_systems = {
     "Baseline": baseline_ir,
     "Text-TF-IDF": text_ir_tfidf,
@@ -147,11 +147,7 @@ if not os.path.exists("precomputed_similarities.pkl"):
     "EarlyFusion-Bert-MusicNN": early_fusion_ir,
     "LateFusion-Bert-MusicNN-ResNet": late_fusion_ir,
     "EarlyFusion-Avg-CLAP": early_fusion_clap_ir,
-    "LateFusion-Bert-MusicNN-ResNet": late_fusion_ir,
-    "LateFusion-CLAP": late_fusion_clap_ir
-}
-
-if not os.path.exists("precomputed_similarities.pkl"):
+    "LateFusion-CLAP": late_fusion_clap_ir}
     precompute_similarities(ir_systems, tracks, tracks_clap)
 
 # Load precomputed similarities
@@ -201,18 +197,25 @@ def get_metrics(query_track, number_retrieved, query_relevant_tracks):
     grid_metrics[0][5].write("Popularity")
     grid_metrics[0][6].write("Diversity")
     for system in systems:
-        metrics_recommended_track_ids = precomputed_similarities[system][query_track.track_id][:number_retrieved]
-        metrics_recommended_tracks = [track for track in tracks if track.track_id in metrics_recommended_track_ids]
-        p = round(precision.evaluate(metrics_recommended_track_ids, query_relevant_tracks),4)
-        r = round(recall.evaluate(metrics_recommended_track_ids, query_relevant_tracks),4)
-        n = round(ndcg.evaluate(metrics_recommended_track_ids, query_relevant_tracks),4)
-        m = round(mrr.evaluate(metrics_recommended_track_ids, query_relevant_tracks),4)
-        pop = round(popularity.evaluate(metrics_recommended_tracks, query_relevant_tracks),4)
-        d = round(diversity.evaluate(metrics_recommended_tracks, query_relevant_tracks),4)
-        metrics = {"Precision":p, "Recall":r, "nDCG":n, "MRR":m, "Popularity":pop, "Diversity":d}
-        grid_metrics[systems.index(system)][0].write(system)
-        for m in range(len(metrics)):
-            grid_metrics[systems.index(system)][m+1].write(f"{list(metrics.values())[m]}")
+        if query_track.track_id not in precomputed_similarities[system]:
+            grid_metrics[systems.index(system)][0].write(system)
+            grid_metrics[systems.index(system)][1].write("Issue: For some tracks we")
+            grid_metrics[systems.index(system)][2].write("could not receive audio clips,")
+            grid_metrics[systems.index(system)][3].write("hence CLAP systems are not")
+            grid_metrics[systems.index(system)][4].write("usable")
+        else:
+            metrics_recommended_track_ids = precomputed_similarities[system][query_track.track_id][:number_retrieved]
+            metrics_recommended_tracks = [track for track in tracks if track.track_id in metrics_recommended_track_ids]
+            p = round(precision.evaluate(metrics_recommended_track_ids, query_relevant_tracks),4)
+            r = round(recall.evaluate(metrics_recommended_track_ids, query_relevant_tracks),4)
+            n = round(ndcg.evaluate(metrics_recommended_track_ids, query_relevant_tracks),4)
+            m = round(mrr.evaluate(metrics_recommended_track_ids, query_relevant_tracks),4)
+            pop = round(popularity.evaluate(metrics_recommended_tracks, query_relevant_tracks),4)
+            d = round(diversity.evaluate(metrics_recommended_tracks, query_relevant_tracks),4)
+            metrics = {"Precision":p, "Recall":r, "nDCG":n, "MRR":m, "Popularity":pop, "Diversity":d}
+            grid_metrics[systems.index(system)][0].write(system)
+            for m in range(len(metrics)):
+                grid_metrics[systems.index(system)][m+1].write(f"{list(metrics.values())[m]}")
     return grid_metrics
 
 if query_track is not None:
@@ -235,25 +238,22 @@ ir_system = st.radio(
     horizontal=True,
 )
 
-if query_track is not None and ir_system is not None:
+if query_track is not None and ir_system is not None and query_track.track_id in precomputed_similarities[ir_system]:
     recommended_track_ids = precomputed_similarities[ir_system][query_track.track_id][:number_retrieved]
     recommended_tracks = [track for track in tracks if track.track_id in recommended_track_ids]
+    clap = False
+elif query_track is not None and ir_system is not None and query_track.track_id not in precomputed_similarities[ir_system]:
+    clap = True
 else:
     recommended_tracks = None
+    clap = False
 
 # Results section
-if recommended_tracks is None:
+if clap:
+    st.write("If you selected a CLAP model and see this, we could not fetch the audio clip for this song, hence we can't use this IR system")
+elif not clap and recommended_tracks is None:
     st.write("No results to show yet. Please choose a track for the query and an IR system to receive results") 
 else: 
-    # st.subheader("Evaluation metrics: ")
-    # evaluation_protocol = MetricsEvaluation(tracks)
-    # evaluation = evaluation_protocol.evaluate(text_ir_bert)
-    # metrics_grid = make_grid(1, 4)
-    # metrics_grid[0][0].write("Precision@10: {:.2f}".format(evaluation["Precision@10"]))
-    # metrics_grid[0][1].write("Recall@10: {:.2f}".format(evaluation["Recall@10"]))
-    # metrics_grid[0][2].write("NDCG@10: {:.2f}".format(evaluation["NDCG@10"]))
-    # metrics_grid[0][3].write("MRR: {:.2f}".format(evaluation["MRR"]))
-
     st.header(f"Top {number_retrieved} most similar songs")
     mygrid = make_grid(number_retrieved+1, 6)
     mygrid[0][0].write("Id")
