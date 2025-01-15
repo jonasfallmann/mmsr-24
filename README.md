@@ -12,3 +12,6 @@ conda activate mmsr
 ```sh
 streamlit run web_interface.py
 ```
+
+## LAION CLAP model
+Download the model from https://huggingface.co/lukewys/laion_clap/blob/main/music_audioset_epoch_15_esc_90.14.pt
