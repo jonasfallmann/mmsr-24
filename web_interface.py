@@ -12,6 +12,7 @@ import numpy as np
 import re
 import pickle
 import os
+import csv
 from metrics import PrecisionAtK, RecallAtK, NDCGAtK, MRR, Popularity, DiversityAtK
 
 # web interface
@@ -76,8 +77,9 @@ basic_info_df, youtube_urls_df, tfidf_df, genres_df, tags_df, spotify_df, lastfm
 # Preprocess datasets to tracks objects
 # Load and preprocess data
 tracks = preprocess_tracks()
-ids_df = pd.read_csv('dataset/id_clap_audio_mmsr.tsv', sep='\t')
-valid_ids = set(ids_df['id'])
+with open('deployment_data/clap_ids.csv', newline='') as f:
+    reader = csv.reader(f)
+    valid_ids = list(reader)[0]
 tracks_clap = [track for track in tracks if track.track_id in valid_ids]
 @st.cache_data
 def load_ir_systems(_tracks, _tracks_clap):
