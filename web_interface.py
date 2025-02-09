@@ -21,18 +21,25 @@ st.title("Retrieval system")
 
 @st.cache_data
 def load_data():
-    basic_info_df = pd.read_csv("deployment_data/id_information_mmsr.tsv", sep='\t')
-    youtube_urls_df = pd.read_csv("deployment_data/id_url_mmsr.tsv", sep='\t')
-    genres_df = pd.read_csv("deployment_data/id_genres_mmsr.tsv", sep='\t')
-    tags_df = pd.read_csv("deployment_data/id_tags_dict.tsv", sep='\t')
-    tfidf_df = pd.read_csv("deployment_data/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
-    spotify_df = pd.read_csv('deployment_data/id_metadata_mmsr.tsv', sep='\t')
-    lastfm_df = pd.read_csv('deployment_data/id_total_listens.tsv', sep='\t')
-    return basic_info_df, youtube_urls_df, genres_df, tags_df, tfidf_df, spotify_df, lastfm_df
+    basic_info_df = pd.read_csv("dataset/id_information_mmsr.tsv", sep='\t')
+    youtube_urls_df = pd.read_csv("dataset/id_url_mmsr.tsv", sep='\t')
+    genres_df = pd.read_csv("dataset/id_genres_mmsr.tsv", sep='\t')
+    tags_df = pd.read_csv("dataset/id_tags_dict.tsv", sep='\t')
+    tfidf_df = pd.read_csv("dataset/id_lyrics_tf-idf_mmsr.tsv", sep='\t', index_col=0)
+    bert_df = pd.read_csv("dataset/id_lyrics_bert_mmsr.tsv", sep='\t', index_col=0)
+    spectral_df = pd.read_csv("dataset/id_blf_spectral_mmsr.tsv", sep='\t', index_col=0)
+    musicnn_df = pd.read_csv("dataset/id_musicnn_mmsr.tsv", sep='\t', index_col=0)
+    resnet_df = pd.read_csv("dataset/id_resnet_mmsr.tsv", sep='\t', index_col=0)
+    vgg19_df = pd.read_csv("dataset/id_vgg19_mmsr.tsv", sep='\t', index_col=0)
+    spotify_df = pd.read_csv('dataset/id_metadata_mmsr.tsv', sep='\t')
+    lastfm_df = pd.read_csv('dataset/id_total_listens.tsv', sep='\t')
+    clap_text_df = pd.read_csv('dataset/id_clap_songtitles_mmsr.tsv', sep='\t', index_col=0)
+    clap_audio_df = pd.read_csv('dataset/id_clap_audio_mmsr.tsv', sep='\t', index_col=0)
+    return basic_info_df, youtube_urls_df, genres_df, tags_df, tfidf_df, bert_df, spectral_df, musicnn_df, resnet_df, vgg19_df, spotify_df, lastfm_df, clap_text_df, clap_audio_df
 
 @st.cache_data
 def preprocess_tracks():
-    basic_info_df, youtube_urls_df, genres_df, tags_df, tfidf_df, spotify_df, lastfm_df = load_data()
+    basic_info_df, youtube_urls_df, genres_df, tags_df, tfidf_df, bert_df, spectral_df, musicnn_df, resnet_df, vgg19_df, spotify_df, lastfm_df, clap_text_df, clap_audio_df = load_data()
     return preprocess(
         basic_info_df, 
         youtube_urls_df,
@@ -41,6 +48,13 @@ def preprocess_tracks():
         tags_df,
         spotify_df,
         lastfm_df,
+        bert_df,
+        clap_text_df,
+        spectral_df,
+        musicnn_df,
+        clap_audio_df,
+        resnet_df,
+        vgg19_df
     )
 
 @st.cache_data
@@ -135,6 +149,7 @@ def precompute_similarities(ir_systems, tracks, tracks_clap):
 
 
 if not os.path.exists("precomputed_similarities.pkl"):
+    print(len(tracks), len(tracks_clap))
     baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, audio_ir_clap, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir, late_fusion_clap_ir, early_fusion_clap_ir = load_ir_systems(tracks, tracks_clap)
     ir_systems = {
     "Baseline": baseline_ir,
