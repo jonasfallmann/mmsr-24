@@ -86,11 +86,22 @@ def load_datasets():
     lastfm_df = pd.read_csv('deployment_data/id_total_listens.tsv', sep='\t')
     return basic_info_df, youtube_urls_df, tfidf_df, genres_df, tags_df, spotify_df, lastfm_df
 
-basic_info_df, youtube_urls_df, tfidf_df, genres_df, tags_df, spotify_df, lastfm_df = load_datasets()
+@st.cache_data
+def preprocess_tracks_runtime():
+    basic_info_df, youtube_urls_df, tfidf_df, genres_df, tags_df, spotify_df, lastfm_df = load_datasets()
+    return preprocess(
+        basic_info_df, 
+        youtube_urls_df,
+        tfidf_df,
+        genres_df,
+        tags_df,
+        spotify_df,
+        lastfm_df,
+        )
 
 # Preprocess datasets to tracks objects
 # Load and preprocess data
-tracks = preprocess_tracks()
+tracks = preprocess_tracks_runtime()
 with open('deployment_data/clap_ids.csv', newline='') as f:
     reader = csv.reader(f)
     valid_ids = list(reader)[0]
@@ -111,7 +122,6 @@ def load_ir_systems(_tracks, _tracks_clap):
     late_fusion_clap_ir = LateFusionIRSystem(_tracks_clap, [text_ir_clap, audio_ir_clap],[0.7, 0.3]).set_name('LateFusion-CLAP')
     early_fusion_clap_ir = CombinedCLAPIRSystem(_tracks_clap).set_name("EarlyFusion-Avg-CLAP")
     return baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, audio_ir_clap, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir, late_fusion_clap_ir, early_fusion_clap_ir
-
 
 
 # Precompute and store similarities
@@ -149,6 +159,7 @@ def precompute_similarities(ir_systems, tracks, tracks_clap):
 
 
 if not os.path.exists("precomputed_similarities.pkl"):
+    tracks = preprocess_tracks()
     baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, audio_ir_clap, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir, late_fusion_clap_ir, early_fusion_clap_ir = load_ir_systems(tracks, tracks_clap)
     ir_systems = {
     "Baseline": baseline_ir,
