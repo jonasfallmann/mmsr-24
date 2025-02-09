@@ -149,7 +149,6 @@ def precompute_similarities(ir_systems, tracks, tracks_clap):
 
 
 if not os.path.exists("precomputed_similarities.pkl"):
-    print(len(tracks), len(tracks_clap))
     baseline_ir, text_ir_tfidf, text_ir_bert, text_ir_clap, audio_ir_spectral, audio_ir_musicnn, audio_ir_clap, visual_ir_resnet, visual_ir_vgg, early_fusion_ir, late_fusion_ir, late_fusion_clap_ir, early_fusion_clap_ir = load_ir_systems(tracks, tracks_clap)
     ir_systems = {
     "Baseline": baseline_ir,
